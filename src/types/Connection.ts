@@ -1,6 +1,7 @@
-import { WampID } from './Protocol';
+import { WampID } from './messages/MessageTypes';
 import { ISerializer } from './Serializer';
 import { ITransportFactory } from './Transport';
+import { IAuthProvider } from './AuthProvider';
 
 export enum LogLevel {
   DEBUG = "DEBUG",
@@ -18,7 +19,8 @@ export type ConnectionOptions = {
   transportOptions: {
     [key: string]: any;
   };
-  logFunction?: LogFunction
+  authProviders: IAuthProvider[];
+  logFunction?: LogFunction;
 }
 
 export type CallResult<TArgs, TKwArgs> = {
