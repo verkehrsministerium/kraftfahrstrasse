@@ -6,10 +6,15 @@
     "declaration": true,
     "experimentalDecorators": true,
     "noImplicitAny": true,
-    "outDir": "./build"
+    "outDir": "./build",
+    "lib": [
+      "es2015", "es7", "esnext.asynciterable", "dom"
+    ],
+    "sourceMap": true,
+    "types": [],
   },
   "include": [
-    "./src/**/*"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules"
