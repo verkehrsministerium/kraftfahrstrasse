@@ -1,0 +1,24 @@
+{
+  "name": "kraftfahrstrasse",
+  "version": "0.0.1",
+  "description": "WAMP implementation for TypeScript",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Verkehrsministerium/kraftfahrstrasse.git"
+  },
+  "keywords": [
+    "wamp",
+    "autobahn",
+    "websocket"
+  ],
+  "author": "Johann Wagner, Martin Koppehel, Fin Christensen, Johannes Wünsche, Marten Wallewein",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Verkehrsministerium/kraftfahrstrasse/issues"
+  },
+  "homepage": "https://github.com/Verkehrsministerium/kraftfahrstrasse#readme"
+}
