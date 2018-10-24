@@ -1,4 +1,4 @@
-import { IAuthProvider } from '../types/AuthProvider';
+import { IAuthProvider, Signature } from '../types/AuthProvider';
 import { WampDict } from '../types/messages/MessageTypes';
 
 export class TransportLevelProvider implements IAuthProvider {
@@ -7,7 +7,7 @@ export class TransportLevelProvider implements IAuthProvider {
     // AnonymousAuthProvider is considered a "transport level authentication provider."
     return true;
   }
-  public ComputeChallenge(extra: WampDict): Promise<string> {
+  public ComputeChallenge(_: WampDict): Promise<Signature> {
     return Promise.reject("not supported in transport level authentiator");
   }
   public AuthID(): string {

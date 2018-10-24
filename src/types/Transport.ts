@@ -1,23 +1,31 @@
 import { WampMessage } from './Protocol';
 import { ISerializer } from './Serializer';
+import { WampDict } from './messages/MessageTypes';
+
+export enum ETransportEventType {
+  OPEN,
+  ERROR,
+  MESSAGE,
+  CLOSE,
+}
 
 export type TransportEvent = {
-  type: 'open';
+  type: ETransportEventType.OPEN;
 } | {
-  type: 'error';
+  type: ETransportEventType.ERROR;
   error: string;
 } | {
-  type: 'message';
+  type: ETransportEventType.MESSAGE;
   message: WampMessage;
 } | {
-  type: 'close';
+  type: ETransportEventType.CLOSE;
   code: number;
   reason: string;
   wasClean: boolean;
 };
 
 export interface ITransportFactory {
-    new(serializer: ISerializer, name: string): ITransport;
+    new(serializer: ISerializer, options?: WampDict): ITransport;
 }
 
 export interface ITransport {
