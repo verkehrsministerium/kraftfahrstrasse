@@ -31,3 +31,9 @@ export type WampDict = {
   [key: string]: any;
 }
 export type WampList = Array<any>;
+
+export enum EMatchPolicy {
+  Wildcard = "wildcard",
+  Prefix = "prefix",
+  Exact = "",
+}

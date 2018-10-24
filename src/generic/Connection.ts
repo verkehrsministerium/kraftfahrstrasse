@@ -1,7 +1,10 @@
-import { WampURI, EWampMessageID } from '../types/messages/MessageTypes';
+import { WampURI, EWampMessageID, WampList, WampDict } from '../types/messages/MessageTypes';
 import { WampHelloMessage, HelloMessageDetails } from '../types/messages/HelloMessage';
 import { PublishOptions } from '../types/messages/PublishMessage';
 import { WampMessage, WampChallengeMessage } from '../types/Protocol';
+import { IMessageProcessor, IMessageProcessorFactory, IDGen } from './MessageProcessor';
+import { Publisher } from './Publisher';
+import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
 import {
   IConnection,
   ConnectionOptions,
@@ -25,6 +28,12 @@ export class Connection implements IConnection {
     private transport: ITransport;
     private onOpen: Deferred<void>;
     private onClose: Deferred<ConnectionCloseInfo>;
+
+    // The type of subHandlers has to match the order of the Factories in subFactories
+    private subHandlers: [Publisher] = null;
+    private subFactories: IMessageProcessorFactory[] = [Publisher];
+    private idGen: IDGen = null;
+
     private state: ConnectionStateMachine;
     constructor(private connectionOptions: ConnectionOptions) {
       this.connectionOptions.logFunction = this.connectionOptions.logFunction || console.log;
@@ -68,17 +77,20 @@ export class Connection implements IConnection {
       return this.OnClose();
     }
 
-    public async Call<A, K, RA, RK>(uri: WampURI, args: A, kwargs: K, opts: any): Promise<CallResult<RA, RK>> {
+    public async Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, args: A, kwargs: K, opts: any): Promise<CallResult<RA, RK>> {
       throw new Error("not implemented yet");
     }
-    public async Register<A, K, RA, RK>(uri: WampURI, handler: CallHandler<A, K, RA, RK>, opts: any): Promise<IRegistration> {
+    public async Register<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, handler: CallHandler<A, K, RA, RK>, opts: any): Promise<IRegistration> {
       throw new Error("not implemented yet");
     }
-    public async Subscribe<A, K>(uri: WampURI, handler: EventHandler<A, K>, opts: any): Promise<ISubscription> {
+    public async Subscribe<A extends WampList, K extends WampDict>(uri: WampURI, handler: EventHandler<A, K>, opts: any): Promise<ISubscription> {
       throw new Error("not implemented yet");
     }
-    public async Publish<A, K>(uri: WampURI, args: A, kwargs: K, opts: PublishOptions): Promise<IPublication> {
-      throw new Error("not implemented yet");
+    public async Publish<A extends WampList, K extends WampDict>(uri: WampURI, args: A, kwargs: K, opts: PublishOptions): Promise<IPublication> {
+      if (!this.subHandlers) {
+        throw new Error("invalid session state");
+      }
+      return this.subHandlers[0].Publish(uri, args, kwargs, opts);
     }
 
     private async runConnection(): Promise<void> {
@@ -93,8 +105,9 @@ export class Connection implements IConnection {
           case ETransportEventType.MESSAGE: {
             if (this.state.getState() === EConnectionState.ESTABLISHED) {
               await this.processMessage(event.message);
+            } else {
+              await this.processSessionMessage(event.message);
             }
-            await this.processSessionMessage(event.message);
           }
           break;
           case ETransportEventType.CLOSE: {
@@ -167,6 +180,18 @@ export class Connection implements IConnection {
         break;
         case EConnectionState.ESTABLISHED: {
           //TODO: Extract authentication and session ID from the message
+          this.idGen = {
+            global: new GlobalIDGenerator(),
+            session: new SessionIDGenerator(),
+          };
+          this.subHandlers = this.subFactories.map(f => new f((msg) => {
+            this.transport.Send(msg);
+          }, (reason) => {
+            this.handleProtocolViolation(reason);
+          }, this.idGen)) as any; // this works.
+          // this is, because map on tuples is not defined typesafe-ish.
+          // Harr, Harr, Harr
+
           this.onOpen.resolve();
           this.onOpen = null;
         }
@@ -222,6 +247,19 @@ export class Connection implements IConnection {
         this.state.update([EMessageDirection.RECEIVED, msg[0]]);
         return;
       }
-      this.connectionOptions.logFunction(LogLevel.DEBUG, new Date(), "connection", `Received message: ${JSON.stringify(msg)}`);
+      let success = false;
+      for (const subHandler of this.subHandlers) {
+        if (success = subHandler.ProcessMessage(msg)) {
+          break;
+        }
+      }
+      if (!success) {
+        this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), "connection", `Unhandled message: ${JSON.stringify(msg)}`);
+        this.handleProtocolViolation("no handler found for message");
+      }
+    }
+
+    private handleProtocolViolation(reason: WampURI): void {
+      this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), "connection", `Protocol violation: ${reason}`);
     }
 }

@@ -1,11 +1,11 @@
 import { NodeWebSocketTransport } from './transport/NodeWebSocketTransport';
 import { Connection } from './generic/Connection';
-import { MSGPackSerializer } from './serialize/MSGPack';
+import { JSONSerializer } from './serialize/JSON';
 import { TicketAuthProvider } from './auth/Ticket';
 
 const connection = new Connection({
   endpoint: "wss://dev-test.robulab.com/ws",
-  serializer: new MSGPackSerializer(),
+  serializer: new JSONSerializer(),
   transport: NodeWebSocketTransport,
   transportOptions: {},
   authProvider: new TicketAuthProvider("admin", async () => ({ signature: "admin" })),
@@ -15,9 +15,11 @@ const connection = new Connection({
 
 connection.Open().then(() => {
   console.log("Connection established");
-}, err => {
-  console.log(err);
-});
+  return connection.Publish("com.robulab.foo.bar", ["foo", 42], null, {
+    acknowledge: true,
+  });
+}).then((pub) => pub.OnPublished())
+.then((id) => console.log(`Published: ${id}`), err => console.log);
 connection.OnClose().then(info => {
   console.log("Connection closed:", info);
 }, err => {

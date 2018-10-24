@@ -1,5 +1,5 @@
 import { IAuthProvider } from "./AuthProvider";
-import { WampID, WampDict } from "./messages/MessageTypes";
+import { WampID, WampDict, WampList } from "./messages/MessageTypes";
 import { PublishOptions } from "./messages/PublishMessage";
 import { ISerializer } from "./Serializer";
 import { ITransportFactory } from "./Transport";
@@ -39,13 +39,13 @@ export type ConnectionOptions = {
   transportOptions?: WampDict;
 };
 
-export type CallResult<TArgs, TKwArgs> = {
+export type CallResult<TArgs extends WampList, TKwArgs extends WampDict> = {
   Args: TArgs;
   KwArgs: TKwArgs;
 };
 
-export type CallHandler<TA, TKwA, TRA, TRKwA> = (args: TA, kwArgs: TKwA, details: any) => CallResult<TRA, TRKwA>;
-export type EventHandler<TA, TKwA> = (args: TA, kwArgs: TKwA, details: any) => void;
+export type CallHandler<TA extends WampList, TKwA extends WampDict, TRA extends WampList, TRKwA extends WampDict> = (args: TA, kwArgs: TKwA, details: any) => CallResult<TRA, TRKwA>;
+export type EventHandler<TA extends WampList, TKwA extends WampDict> = (args: TA, kwArgs: TKwA, details: any) => void;
 
 export interface IRegistration {
   Unregister(): Promise<void>;
@@ -70,8 +70,8 @@ export interface IConnection {
 
   // TODO: Add methods to allow feature queries
 
-  Call<A, K, RA, RK>(uri: string, args: A, kwArgs: K, options: any): Promise<CallResult<RA, RK>>;
-  Register<A, K, RA, RK>(uri: string, handler: CallHandler<A, K, RA, RK>, options: any): Promise<IRegistration>;
-  Publish<A, K>(topic: string, args: A, kwArgs: K, options: PublishOptions): Promise<IPublication>;
-  Subscribe<A, K>(topic: string, handler: EventHandler<A, K>, options: any): Promise<ISubscription>;
+  Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: string, args: A, kwArgs: K, options: any): Promise<CallResult<RA, RK>>;
+  Register<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: string, handler: CallHandler<A, K, RA, RK>, options: any): Promise<IRegistration>;
+  Publish<A extends WampList, K extends WampDict>(topic: string, args: A, kwArgs: K, options: PublishOptions): Promise<IPublication>;
+  Subscribe<A extends WampList, K extends WampDict>(topic: string, handler: EventHandler<A, K>, options: any): Promise<ISubscription>;
 }

@@ -13,7 +13,7 @@ export type PublishOptions = {
 } & WampDict;
 
 // [PUBLISH, RequestID, Options, Topic, Args, KwArgs]
-export type WampPublishMessage<A, K> = [EWampMessageID.PUBLISH, WampID, PublishOptions, WampURI, A?, K?];
+export type WampPublishMessage = [EWampMessageID.PUBLISH, WampID, PublishOptions, WampURI, WampList?, WampDict?];
 
 // [PUBLISHED, RequestID, PublicationID]
 export type WampPublishedMessage = [EWampMessageID.PUBLISHED, WampID, WampID];
