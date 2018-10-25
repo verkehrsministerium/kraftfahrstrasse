@@ -1,4 +1,5 @@
 import { WampMessage } from '../types/Protocol';
+import { WampDict } from '../types/messages/MessageTypes';
 import { IIDGenerator } from '../util/id';
 
 export type MessageSender = (msg: WampMessage) => void;
@@ -10,6 +11,7 @@ export type IDGen = {
 
 export interface IMessageProcessorFactory {
   new (sender: MessageSender, violator: ProtocolViolator, idgen: IDGen): IMessageProcessor;
+  GetFeatures(): WampDict;
 }
 export interface IMessageProcessor {
   Close(): void;

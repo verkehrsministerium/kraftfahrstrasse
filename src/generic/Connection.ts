@@ -132,6 +132,8 @@ export class Connection implements IConnection {
           case ETransportEventType.CLOSE: {
             this.transport = null;
             this.state = null;
+            this.subHandlers.forEach(h => h.Close());
+            this.subHandlers = null;
             if (!!this.onClose) {
               if (event.wasClean) {
                 this.onClose.resolve({
@@ -160,12 +162,7 @@ export class Connection implements IConnection {
     private sendHello(): void {
       console.log(`Sending hello!`);
       const details: HelloMessageDetails = {
-        roles: {
-          callee: {},
-          caller: {},
-          publisher: {},
-          subscriber: {},
-        },
+        roles: Object.assign({}, ...this.subFactories.map(j => j.GetFeatures())),
         agent: "kraftfahrstrasse pre-alpha",
       };
 

@@ -6,6 +6,20 @@ import { CallResult } from '../types/Connection';
 import { Deferred } from 'queueable';
 
 export class Caller implements IMessageProcessor {
+  public static GetFeatures(): WampDict {
+    return {
+      caller: {
+        features: {
+          progressive_call_results: true,
+          call_timeout: true,
+          call_canceling: true,
+          caller_identification: true,
+          sharded_registration: true,
+        }
+      }
+    }
+  }
+
   private pendingCalls = new Map<WampID, [Deferred<CallResult<WampList, WampDict>>, boolean]>();
   private closed = false;
 

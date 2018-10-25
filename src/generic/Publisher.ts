@@ -37,6 +37,19 @@ export class Publication implements IPublication {
 }
 
 export class Publisher implements IMessageProcessor {
+  public static GetFeatures(): WampDict {
+    return {
+      publisher: {
+        features: {
+          subscriber_blackwhite_listing: true,
+          publisher_exclusion: true,
+          publisher_identification: true,
+          sharded_subscription: true,
+        }
+      }
+    }
+  }
+
   private pendingPublications = new Map<number, Publication>();
   private closed = false;
   constructor(private sender: MessageSender, private violator: ProtocolViolator, private idGen: IDGen) {}

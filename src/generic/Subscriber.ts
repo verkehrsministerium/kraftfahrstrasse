@@ -91,6 +91,20 @@ class Subscription implements ISubscription {
 }
 
 export class Subscriber implements IMessageProcessor {
+  public static GetFeatures(): WampDict {
+    return {
+      subscriber: {
+        features: {
+          publisher_identification: true,
+          publication_trustlevels: true,
+          pattern_based_subscription: true,
+          sharded_subscription: true,
+          event_history: true,
+        }
+      }
+    }
+  }
+
   private closed = false;
   private pendingSubscriptions = new Map<WampID, [Deferred<Subscription>, EventHandler<WampList, WampDict>]>();
   private pendingUnsubscriptions = new Map<WampID, MultiSubscription>();

@@ -1,7 +1,9 @@
 import { NodeWebSocketTransport } from './transport/NodeWebSocketTransport';
 import { Connection } from './generic/Connection';
+import { ConnectionCloseInfo } from './types/Connection';
 import { JSONSerializer } from './serialize/JSON';
 import { AnonymousAuthProvider } from './auth/Anonymous';
+import { Deferred } from 'queueable';
 
 const connection = new Connection({
   endpoint: "ws://localhost:4000",
@@ -15,12 +17,15 @@ const connection = new Connection({
 
 const main = async () => {
   await connection.Open();
-  const sub = await connection.Subscribe("com.robulab.target.create", (args, kwargs, details) => {
+  const sub = await connection.Subscribe("com.robulab.target.changed", (args, kwargs, details) => {
     console.log("Subscription:", args, kwargs, details);
   }, {});
   setTimeout(() => sub.Unsubscribe().then(() => console.log("Unsubscribed")), 10000);
   const [res, cid] = connection.Call("com.robulab.target.get-online");
   console.log(await res, cid);
+  const closer = new Deferred<ConnectionCloseInfo>();
+  setTimeout(() => connection.Close().then(closer.resolve, closer.reject), 20000);
+  console.log(await closer);
 }
 
 main().then(() => {});
