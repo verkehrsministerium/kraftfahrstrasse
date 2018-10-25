@@ -1,9 +1,11 @@
 import { WampURI, EWampMessageID, WampList, WampDict } from '../types/messages/MessageTypes';
 import { WampHelloMessage, HelloMessageDetails } from '../types/messages/HelloMessage';
 import { PublishOptions } from '../types/messages/PublishMessage';
+import { SubscribeOptions } from '../types/messages/SubscribeMessage';
 import { WampMessage, WampChallengeMessage } from '../types/Protocol';
-import { IMessageProcessor, IMessageProcessorFactory, IDGen } from './MessageProcessor';
+import { IMessageProcessorFactory, IDGen } from './MessageProcessor';
 import { Publisher } from './Publisher';
+import { Subscriber } from './Subscriber';
 import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
 import {
   IConnection,
@@ -30,8 +32,8 @@ export class Connection implements IConnection {
     private onClose: Deferred<ConnectionCloseInfo>;
 
     // The type of subHandlers has to match the order of the Factories in subFactories
-    private subHandlers: [Publisher] = null;
-    private subFactories: IMessageProcessorFactory[] = [Publisher];
+    private subHandlers: [Publisher, Subscriber] = null;
+    private subFactories: IMessageProcessorFactory[] = [Publisher, Subscriber];
     private idGen: IDGen = null;
 
     private state: ConnectionStateMachine;
@@ -83,8 +85,11 @@ export class Connection implements IConnection {
     public async Register<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, handler: CallHandler<A, K, RA, RK>, opts: any): Promise<IRegistration> {
       throw new Error("not implemented yet");
     }
-    public async Subscribe<A extends WampList, K extends WampDict>(uri: WampURI, handler: EventHandler<A, K>, opts: any): Promise<ISubscription> {
-      throw new Error("not implemented yet");
+    public async Subscribe<A extends WampList, K extends WampDict>(uri: WampURI, handler: EventHandler<A, K>, opts: SubscribeOptions): Promise<ISubscription> {
+      if (!this.subHandlers) {
+        throw new Error("invalid session state");
+      }
+      return this.subHandlers[1].Subscribe(uri, handler, opts);
     }
     public async Publish<A extends WampList, K extends WampDict>(uri: WampURI, args: A, kwargs: K, opts: PublishOptions): Promise<IPublication> {
       if (!this.subHandlers) {

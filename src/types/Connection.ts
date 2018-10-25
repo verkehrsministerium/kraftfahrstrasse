@@ -1,6 +1,7 @@
 import { IAuthProvider } from "./AuthProvider";
 import { WampID, WampDict, WampList } from "./messages/MessageTypes";
 import { PublishOptions } from "./messages/PublishMessage";
+import { SubscribeOptions } from './messages/SubscribeMessage';
 import { ISerializer } from "./Serializer";
 import { ITransportFactory } from "./Transport";
 
@@ -55,7 +56,7 @@ export interface IRegistration {
 
 export interface ISubscription {
   Unsubscribe(): Promise<void>;
-  OnUnsubscribe(): Promise<void>;
+  OnUnsubscribed(): Promise<void>;
   ID(): WampID;
 }
 
@@ -73,5 +74,5 @@ export interface IConnection {
   Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: string, args: A, kwArgs: K, options: any): Promise<CallResult<RA, RK>>;
   Register<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: string, handler: CallHandler<A, K, RA, RK>, options: any): Promise<IRegistration>;
   Publish<A extends WampList, K extends WampDict>(topic: string, args: A, kwArgs: K, options: PublishOptions): Promise<IPublication>;
-  Subscribe<A extends WampList, K extends WampDict>(topic: string, handler: EventHandler<A, K>, options: any): Promise<ISubscription>;
+  Subscribe<A extends WampList, K extends WampDict>(topic: string, handler: EventHandler<A, K>, options: SubscribeOptions): Promise<ISubscription>;
 }

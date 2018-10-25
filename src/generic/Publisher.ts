@@ -1,6 +1,6 @@
-import { PublishOptions, WampPublishMessage, WampPublishedMessage } from '../types/messages/PublishMessage';
+import { PublishOptions, WampPublishMessage } from '../types/messages/PublishMessage';
 import { WampID, WampURI, WampList, WampDict, EWampMessageID } from '../types/messages/MessageTypes';
-import { WampErrorMessage, WampMessage } from '../types/Protocol';
+import { WampMessage } from '../types/Protocol';
 import { IPublication } from '../types/Connection';
 import { MessageSender, IMessageProcessor, ProtocolViolator, IDGen } from './MessageProcessor';
 
@@ -9,7 +9,7 @@ import { Deferred } from 'queueable';
 export class Publication implements IPublication {
   private onPublished = new Deferred<WampID>();
   private resolved = false;
-  constructor(private requestID: WampID, private expectAck: boolean) {
+  constructor(private requestID: WampID, expectAck: boolean) {
     if (!expectAck) {
       this.onPublished.reject('acknowledge is not set, expecting no answer');
       this.resolved = true;
@@ -68,8 +68,8 @@ export class Publisher implements IMessageProcessor {
 
   public Close(): void {
     this.closed = true;
-    for (const [_, publication] of this.pendingPublications) {
-      publication.fail("publisher closing");
+    for (const publication of this.pendingPublications) {
+      publication[1].fail("publisher closing");
       // TODO: log
     }
     this.pendingPublications.clear();
