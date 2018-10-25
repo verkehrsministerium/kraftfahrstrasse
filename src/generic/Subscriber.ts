@@ -108,7 +108,7 @@ export class Subscriber implements IMessageProcessor {
     const msg: WampSubscribeMessage = [
       EWampMessageID.SUBSCRIBE,
       requestID,
-      options,
+      options || {},
       topic,
     ];
     this.sender(msg);

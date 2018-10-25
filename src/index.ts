@@ -19,6 +19,8 @@ const main = async () => {
     console.log("Subscription:", args, kwargs, details);
   }, {});
   setTimeout(() => sub.Unsubscribe().then(() => console.log("Unsubscribed")), 10000);
+  const [res, cid] = connection.Call("com.robulab.target.get-online");
+  console.log(await res, cid);
 }
 
 main().then(() => {});

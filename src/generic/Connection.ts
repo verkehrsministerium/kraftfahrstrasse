@@ -1,11 +1,13 @@
-import { WampURI, EWampMessageID, WampList, WampDict } from '../types/messages/MessageTypes';
+import { WampURI, EWampMessageID, WampList, WampDict, WampID } from '../types/messages/MessageTypes';
 import { WampHelloMessage, HelloMessageDetails } from '../types/messages/HelloMessage';
 import { PublishOptions } from '../types/messages/PublishMessage';
 import { SubscribeOptions } from '../types/messages/SubscribeMessage';
-import { WampMessage, WampChallengeMessage } from '../types/Protocol';
+import { CallOptions, ECallKillMode } from '../types/messages/CallMessage';
+import { WampMessage, WampAbortMessage, WampChallengeMessage } from '../types/Protocol';
 import { IMessageProcessorFactory, IDGen } from './MessageProcessor';
 import { Publisher } from './Publisher';
 import { Subscriber } from './Subscriber';
+import { Caller } from './Caller';
 import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
 import {
   IConnection,
@@ -32,8 +34,8 @@ export class Connection implements IConnection {
     private onClose: Deferred<ConnectionCloseInfo>;
 
     // The type of subHandlers has to match the order of the Factories in subFactories
-    private subHandlers: [Publisher, Subscriber] = null;
-    private subFactories: IMessageProcessorFactory[] = [Publisher, Subscriber];
+    private subHandlers: [Publisher, Subscriber, Caller] = null;
+    private subFactories: IMessageProcessorFactory[] = [Publisher, Subscriber, Caller];
     private idGen: IDGen = null;
 
     private state: ConnectionStateMachine;
@@ -76,24 +78,36 @@ export class Connection implements IConnection {
         },
         "wamp.close.normal",
       ]);
+      this.state.update([EMessageDirection.SENT, EWampMessageID.GOODBYE]);
       return this.OnClose();
     }
 
-    public async Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, args: A, kwargs: K, opts: any): Promise<CallResult<RA, RK>> {
-      throw new Error("not implemented yet");
-    }
-    public async Register<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, handler: CallHandler<A, K, RA, RK>, opts: any): Promise<IRegistration> {
-      throw new Error("not implemented yet");
-    }
-    public async Subscribe<A extends WampList, K extends WampDict>(uri: WampURI, handler: EventHandler<A, K>, opts: SubscribeOptions): Promise<ISubscription> {
+    public CancelCall(callid: WampID, mode?: ECallKillMode): void {
       if (!this.subHandlers) {
         throw new Error("invalid session state");
       }
+      this.subHandlers[2].CancelCall(callid, mode);
+    }
+
+    public Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, args?: A, kwargs?: K, opts?: CallOptions): [Promise<CallResult<RA, RK>>, WampID] {
+      if (!this.subHandlers) {
+        return [Promise.reject("invalid session state"), -1];
+      }
+      return this.subHandlers[2].Call(uri, args, kwargs, opts);
+    }
+
+    public async Register<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, handler: CallHandler<A, K, RA, RK>, opts: any): Promise<IRegistration> {
+      throw new Error("not implemented yet");
+    }
+    public Subscribe<A extends WampList, K extends WampDict>(uri: WampURI, handler: EventHandler<A, K>, opts?: SubscribeOptions): Promise<ISubscription> {
+      if (!this.subHandlers) {
+        return Promise.reject("invalid session state");
+      }
       return this.subHandlers[1].Subscribe(uri, handler, opts);
     }
-    public async Publish<A extends WampList, K extends WampDict>(uri: WampURI, args: A, kwargs: K, opts: PublishOptions): Promise<IPublication> {
+    public Publish<A extends WampList, K extends WampDict>(uri: WampURI, args?: A, kwargs?: K, opts?: PublishOptions): Promise<IPublication> {
       if (!this.subHandlers) {
-        throw new Error("invalid session state");
+        return Promise.reject("invalid session state");
       }
       return this.subHandlers[0].Publish(uri, args, kwargs, opts);
     }
@@ -223,18 +237,7 @@ export class Connection implements IConnection {
           // protocol violation, so close the transport not clean (i.e. code 3000)
           // and if we encountered the error, send an ABORT message to the server
           if (msg[0] !== EWampMessageID.ABORT) {
-            this.transport.Send([
-              EWampMessageID.ABORT,
-              {
-                "message": "protocol violation"
-              },
-              "wamp.error.protocol_violation"
-            ]);
-            this.transport.Close(3000, "wamp.error.protocol_violation");
-            if (!!this.onOpen) {
-              this.onOpen.reject(new ConnectionOpenError("protcol violation"));
-              this.onOpen = null;
-            }
+            this.handleProtocolViolation("protocol violation during session establish")
           } else {
             this.transport.Close(3000, msg[2]);
             if (!!this.onOpen) {
@@ -265,6 +268,17 @@ export class Connection implements IConnection {
     }
 
     private handleProtocolViolation(reason: WampURI): void {
+      const abortMessage: WampAbortMessage = [
+        EWampMessageID.ABORT,
+        {message: reason},
+        "wamp.error.protocol_violation",
+      ];
       this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), "connection", `Protocol violation: ${reason}`);
+      this.transport.Send(abortMessage);
+      this.transport.Close(3000, "protcol_violation");
+      if (!!this.onOpen) {
+        this.onOpen.reject(new ConnectionOpenError("protcol violation"));
+        this.onOpen = null;
+      }
     }
 }

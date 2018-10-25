@@ -2,6 +2,7 @@ import { IAuthProvider } from "./AuthProvider";
 import { WampID, WampDict, WampList } from "./messages/MessageTypes";
 import { PublishOptions } from "./messages/PublishMessage";
 import { SubscribeOptions } from './messages/SubscribeMessage';
+import { CallOptions, ECallKillMode } from './messages/CallMessage';
 import { ISerializer } from "./Serializer";
 import { ITransportFactory } from "./Transport";
 
@@ -41,8 +42,9 @@ export type ConnectionOptions = {
 };
 
 export type CallResult<TArgs extends WampList, TKwArgs extends WampDict> = {
-  Args: TArgs;
-  KwArgs: TKwArgs;
+  args: TArgs;
+  kwArgs: TKwArgs;
+  nextResult?: Promise<CallResult<TArgs, TKwArgs>>;
 };
 
 export type CallHandler<TA extends WampList, TKwA extends WampDict, TRA extends WampList, TRKwA extends WampDict> = (args: TA, kwArgs: TKwA, details: any) => CallResult<TRA, TRKwA>;
@@ -70,8 +72,8 @@ export interface IConnection {
   OnClose(): Promise<ConnectionCloseInfo>;
 
   // TODO: Add methods to allow feature queries
-
-  Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: string, args: A, kwArgs: K, options: any): Promise<CallResult<RA, RK>>;
+  CancelCall(callid: WampID, mode: ECallKillMode): void;
+  Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: string, args: A, kwArgs: K, options: CallOptions): [Promise<CallResult<RA, RK>>, WampID];
   Register<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: string, handler: CallHandler<A, K, RA, RK>, options: any): Promise<IRegistration>;
   Publish<A extends WampList, K extends WampDict>(topic: string, args: A, kwArgs: K, options: PublishOptions): Promise<IPublication>;
   Subscribe<A extends WampList, K extends WampDict>(topic: string, handler: EventHandler<A, K>, options: SubscribeOptions): Promise<ISubscription>;

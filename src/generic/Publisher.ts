@@ -52,7 +52,7 @@ export class Publisher implements IMessageProcessor {
     const msg: WampPublishMessage = [
       EWampMessageID.PUBLISH,
       requestID,
-      options,
+      options || {},
       topic,
       args || [],
       kwArgs || {},

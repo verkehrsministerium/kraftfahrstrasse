@@ -9,6 +9,12 @@ import {
   WampUnsubscribeMessage,
   WampUnsubscribedMessage,
 } from './messages/SubscribeMessage';
+import {
+  WampCallMessage,
+  WampResultMessage,
+  WampCancelMessage,
+} from './messages/CallMessage';
+
 export type WampAbortMessage = [EWampMessageID.ABORT, WampDict, WampURI];
 export type WampGoodbyeMessage = [EWampMessageID.GOODBYE, WampDict, WampURI];
 export type WampChallengeMessage = [EWampMessageID.CHALLENGE, string, WampDict?];
@@ -29,8 +35,7 @@ export type WampMessage =
   WampUnsubscribeMessage |
   WampUnsubscribedMessage |
   WampEventMessage |
+  WampCallMessage |
+  WampResultMessage |
+  WampCancelMessage |
   WampErrorMessage;
-
-export type CallOptions = {
-  receive_progress: boolean;
-}
