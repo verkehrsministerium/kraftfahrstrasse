@@ -85,16 +85,16 @@ class Subscription implements ISubscription {
   public OnUnsubscribed(): Promise<void> {
     return this.onUnsubscribed.promise;
   }
-  public ID(): number {
+  public ID(): WampID {
     return this.parent.subscriptionID;
   }
 }
 
 export class Subscriber implements IMessageProcessor {
   private closed = false;
-  private pendingSubscriptions = new Map<number, [Deferred<Subscription>, EventHandler<WampList, WampDict>]>();
-  private pendingUnsubscriptions = new Map<number, MultiSubscription>();
-  private currentSubscriptions = new Map<number, MultiSubscription>();
+  private pendingSubscriptions = new Map<WampID, [Deferred<Subscription>, EventHandler<WampList, WampDict>]>();
+  private pendingUnsubscriptions = new Map<WampID, MultiSubscription>();
+  private currentSubscriptions = new Map<WampID, MultiSubscription>();
 
   constructor(private sender: MessageSender, private violator: ProtocolViolator, private idGen: IDGen) {}
 
@@ -123,6 +123,16 @@ export class Subscriber implements IMessageProcessor {
       pendingSub[1][0].reject("subscriber closing");
     }
     this.pendingSubscriptions.clear();
+    for (const pendingUnsub of this.pendingUnsubscriptions) {
+      pendingUnsub[1].onUnsubscribed.reject("subscriber closing");
+      this.currentSubscriptions.delete(pendingUnsub[1].subscriptionID);
+    }
+    this.pendingUnsubscriptions.clear();
+    for (const currentSub of this.currentSubscriptions) {
+      currentSub[1].onUnsubscribed.reject("subscriber closing");
+    }
+    this.currentSubscriptions.clear();
+
   }
 
   public ProcessMessage(msg: WampMessage): boolean {
