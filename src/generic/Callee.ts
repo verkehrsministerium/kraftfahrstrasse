@@ -16,9 +16,11 @@ class Registration implements IRegistration {
     this.reinitCatch();
   }
 
-  private reinitCatch() {
-    this.onUnregistered = new Deferred<void>();
-    this.onUnregistered.promise.catch(() => this.reinitCatch());
+  private reinitCatch(err?: any) {
+    if (err !== "callee closing") {
+      this.onUnregistered = new Deferred<void>();
+      this.onUnregistered.promise.catch((err) => this.reinitCatch(err));
+    }
   }
 
   public Unregister(): Promise<void> {
@@ -129,6 +131,18 @@ export class Callee implements IMessageProcessor {
       pendingReg[1][0].reject("callee closing");
     }
     this.pendingRegistrations.clear();
+    for (const pendingUnreg of this.pendingUnregistrations) {
+      pendingUnreg[1].onUnregistered.reject("callee closing");
+    }
+    this.pendingUnregistrations.clear();
+    for (const pendingCall of this.runningCalls) {
+      pendingCall[1].cancel();
+    }
+    this.runningCalls.clear();
+    for (const currentReg of this.currentRegistrations) {
+      currentReg[1].onUnregistered.reject("callee closing");
+    }
+    this.currentRegistrations.clear();
   }
 
   public Register<
@@ -229,7 +243,9 @@ export class Callee implements IMessageProcessor {
         if (finished) {
           this.runningCalls.delete(cid);
         }
-        this.sender(msg);
+        if (!this.closed) {
+          this.sender(msg);
+        }
       });
       this.runningCalls.set(requestID, call);
       return true;
@@ -248,6 +264,9 @@ export class Callee implements IMessageProcessor {
   }
 
   private unregister(regID: WampID): void {
+    if (this.closed) {
+      throw new Error("callee closed");
+    }
     const requestID = this.idGen.session.ID();
     const reg = this.currentRegistrations.get(regID);
     if (!reg) {
