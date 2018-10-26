@@ -8,7 +8,7 @@ export type GetTicketFunc = (authExtra: WampDict) => Promise<Signature>;
 
 export class TicketAuthProvider implements IAuthProvider {
   constructor(private authid: string, private ticketFunc: GetTicketFunc, private authmethod?: string) {
-    this.authmethod = authmethod || "ticket";
+    this.authmethod = authmethod || 'ticket';
   }
 
   public AuthID(): string {

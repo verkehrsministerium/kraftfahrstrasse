@@ -7,7 +7,7 @@ export class JSONSerializer implements ITextSerializer {
   }
 
   public ProtocolID(): string {
-    return "wamp.2.json";
+    return 'wamp.2.json';
   }
 
   public Serialize(msg: WampMessage): string {

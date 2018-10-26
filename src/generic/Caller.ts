@@ -32,7 +32,7 @@ export class Caller implements IMessageProcessor {
     RK extends WampDict
   >(uri: WampURI, args?: A, kwArgs?: K, details?: CallOptions): [Promise<CallResult<RA, RK>>, WampID] {
     if (this.closed) {
-      return [Promise.reject("caller closed"), -1];
+      return [Promise.reject('caller closed'), -1];
     }
 
     const requestID = this.idGen.session.ID();
@@ -54,16 +54,16 @@ export class Caller implements IMessageProcessor {
   public CancelCall(callid: WampID, killMode?: ECallKillMode): void {
     // TODO: Check if call canceling supported by router
     if (this.closed) {
-      throw new Error("caller closed");
+      throw new Error('caller closed');
     }
     const call = this.pendingCalls.get(callid);
     if (!call) {
-      throw new Error("no such pending call");
+      throw new Error('no such pending call');
     }
     const msg: WampCancelMessage = [
       EWampMessageID.CANCEL,
       callid,
-      { mode: killMode || "" },
+      { mode: killMode || '' },
     ];
     this.sender(msg);
   }
@@ -71,7 +71,7 @@ export class Caller implements IMessageProcessor {
   public Close(): void {
     this.closed = true;
     for (const call of this.pendingCalls) {
-      call[1][0].reject("caller closing");
+      call[1][0].reject('caller closing');
     }
     this.pendingCalls.clear();
   }
@@ -84,7 +84,7 @@ export class Caller implements IMessageProcessor {
       const callid = msg[2];
       const call = this.pendingCalls.get(callid);
       if (!call) {
-        this.violator("unexpected CALL ERROR");
+        this.violator('unexpected CALL ERROR');
         return true;
       }
       this.pendingCalls.delete(callid);
@@ -95,7 +95,7 @@ export class Caller implements IMessageProcessor {
       const callid = msg[1];
       const call = this.pendingCalls.get(callid);
       if (!call) {
-        this.violator("unexpected RESULT");
+        this.violator('unexpected RESULT');
         return true;
       }
       const details = msg[2] || {};
@@ -103,7 +103,7 @@ export class Caller implements IMessageProcessor {
       const reskwargs = msg[4] || {};
       if (details.progress) {
         if (!call[1]) {
-          this.violator("unexpected PROGRESS RESULT");
+          this.violator('unexpected PROGRESS RESULT');
           return true;
         }
         const nextResult = new Deferred<CallResult<WampList, WampDict>>();

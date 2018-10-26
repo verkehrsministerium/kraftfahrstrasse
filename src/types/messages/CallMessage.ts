@@ -1,8 +1,8 @@
 import { EWampMessageID, WampID, WampURI, WampDict, WampList } from './MessageTypes';
 
 export enum ECallRunMode {
-  PARTITION = "partition",
-  ALL = "",
+  PARTITION = 'partition',
+  ALL = '',
 }
 export type CallOptions = {
   receive_progress?: boolean;
@@ -17,13 +17,13 @@ export type CallResultOptions = {
 } & WampDict;
 
 export enum ECallKillMode {
-  SKIP = "skip",
-  KILL = "kill",
-  KILLNOWAIT = "killnowait",
+  SKIP = 'skip',
+  KILL = 'kill',
+  KILLNOWAIT = 'killnowait',
 }
 
 export type CancelOptions = {
-  mode: ECallKillMode | "",
+  mode: ECallKillMode | '',
 } & WampDict;
 
 export type InvocationDetails = {

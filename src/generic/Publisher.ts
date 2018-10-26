@@ -56,7 +56,7 @@ export class Publisher implements IMessageProcessor {
 
   public async Publish<A extends WampList, K extends WampDict>(topic: WampURI, args?: A, kwArgs?: K, options?: PublishOptions): Promise<IPublication> {
     if (this.closed) {
-      throw new Error("Publisher already closed");
+      throw new Error('Publisher already closed');
     }
     options = options || {};
 
@@ -82,7 +82,7 @@ export class Publisher implements IMessageProcessor {
   public Close(): void {
     this.closed = true;
     for (const publication of this.pendingPublications) {
-      publication[1].fail("publisher closing");
+      publication[1].fail('publisher closing');
       // TODO: log
     }
     this.pendingPublications.clear();
@@ -98,7 +98,7 @@ export class Publisher implements IMessageProcessor {
       const publication = this.pendingPublications.get(requestID);
       this.pendingPublications.delete(requestID);
       if (!publication) {
-        this.violator("invalid PUBLISHED message");
+        this.violator('invalid PUBLISHED message');
         return true;
       }
       publication.acknowledge(msg[2]);
@@ -110,7 +110,7 @@ export class Publisher implements IMessageProcessor {
       const publication = this.pendingPublications.get(requestID);
       this.pendingPublications.delete(requestID);
       if (!publication) {
-        this.violator("invalid ERROR PUBLISH message");
+        this.violator('invalid ERROR PUBLISH message');
         return true;
       }
       publication.fail(msg[4]);

@@ -13,7 +13,7 @@ export class MSGPackSerializer implements IBinarySerializer {
     return true;
   }
   public ProtocolID(): string {
-    return "wamp.2.msgpack";
+    return 'wamp.2.msgpack';
   }
   public Serialize(msg: WampMessage): ArrayBufferLike {
     return this.msgpack.encode(msg) as any;

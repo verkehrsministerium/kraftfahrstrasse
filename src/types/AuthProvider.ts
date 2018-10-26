@@ -6,8 +6,8 @@ export type Signature = {
 };
 
 export interface IAuthProvider {
-  IsTransportLevel(): boolean
-  AuthMethod(): string
-  AuthID(): string
-  ComputeChallenge(extra: WampDict): Promise<Signature>
+  IsTransportLevel(): boolean;
+  AuthMethod(): string;
+  AuthID(): string;
+  ComputeChallenge(extra: WampDict): Promise<Signature>;
 }

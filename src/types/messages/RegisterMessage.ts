@@ -1,17 +1,17 @@
 import { EWampMessageID, WampDict, WampID, WampURI } from './MessageTypes';
 
 export enum EWampMatchKind {
-  EXACT = "exact",
-  PREFIX = "prefix",
-  WILDCARD = "wildcard",
+  EXACT = 'exact',
+  PREFIX = 'prefix',
+  WILDCARD = 'wildcard',
 }
 
 export enum EWampInvocationKind {
-  SINGLE = "single",
-  ROUNDROBIN = "roundrobin",
-  RANDOM = "random",
-  FIRST = "first",
-  LAST = "last",
+  SINGLE = 'single',
+  ROUNDROBIN = 'roundrobin',
+  RANDOM = 'random',
+  FIRST = 'first',
+  LAST = 'last',
 }
 
 export type RegisterOptions = {

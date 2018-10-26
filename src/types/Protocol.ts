@@ -1,28 +1,35 @@
-import { EWampMessageID, WampURI, WampID, WampDict, WampList } from './messages/MessageTypes';
+import { EWampMessageID, WampDict, WampID, WampList, WampURI } from './messages/MessageTypes';
+
 import { WampHelloMessage } from './messages/HelloMessage';
 import { WampWelcomeMessage } from './messages/WelcomeMessage';
-import { WampPublishMessage, WampPublishedMessage } from './messages/PublishMessage';
-import {
-  WampEventMessage,
-  WampSubscribeMessage,
-  WampSubscribedMessage,
-  WampUnsubscribeMessage,
-  WampUnsubscribedMessage,
-} from './messages/SubscribeMessage';
+
 import {
   WampCallMessage,
-  WampResultMessage,
   WampCancelMessage,
-  WampInvocationMessage,
-  WampYieldMessage,
   WampInterruptMessage,
+  WampInvocationMessage,
+  WampResultMessage,
+  WampYieldMessage,
 } from './messages/CallMessage';
 
 import {
-  WampRegisterMessage,
+  WampPublishedMessage,
+  WampPublishMessage,
+} from './messages/PublishMessage';
+
+import {
+  WampEventMessage,
+  WampSubscribedMessage,
+  WampSubscribeMessage,
+  WampUnsubscribedMessage,
+  WampUnsubscribeMessage,
+} from './messages/SubscribeMessage';
+
+import {
   WampRegisteredMessage,
-  WampUnregisterMessage,
+  WampRegisterMessage,
   WampUnregisteredMessage,
+  WampUnregisterMessage,
 } from './messages/RegisterMessage';
 
 export type WampAbortMessage = [EWampMessageID.ABORT, WampDict, WampURI];

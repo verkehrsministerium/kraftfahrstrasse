@@ -16,14 +16,14 @@ export class BrowserWebSocketTransport implements ITransport {
       const channel = new Channel<TransportEvent>();
       channel.push({
         type: ETransportEventType.ERROR,
-        error: "Transport already opened!",
+        error: 'Transport already opened!',
       });
       return channel;
     }
 
     this.webSocket = new WebSocket(endpoint, this.serializer.ProtocolID());
     if (IsBinarySerializer(this.serializer)) {
-      this.webSocket.binaryType = "arraybuffer";
+      this.webSocket.binaryType = 'arraybuffer';
     }
     this.webSocket.onopen = () => {
       console.log(`WS onopen`)

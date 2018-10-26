@@ -1,5 +1,6 @@
 import { WampMessage } from './Protocol';
 import { ISerializer } from './Serializer';
+
 import { WampDict } from './messages/MessageTypes';
 
 export enum ETransportEventType {

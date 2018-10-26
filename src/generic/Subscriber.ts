@@ -38,7 +38,7 @@ class MultiSubscription {
 
   public addSubscription(requestID: WampID, sub: Subscription): void {
     if (this.unsubscribed) {
-      throw new Error("Subscription is already destroyed");
+      throw new Error('Subscription is already destroyed');
     }
     this.handlers.set(requestID, sub);
   }
@@ -46,7 +46,7 @@ class MultiSubscription {
   public async Unsubscribe(requestID: WampID): Promise<void> {
     const sub = this.handlers.get(requestID);
     if (!sub) {
-      throw new Error("no such subscription");
+      throw new Error('no such subscription');
     }
     this.handlers.delete(requestID);
     if (this.handlers.size === 0) {
@@ -119,7 +119,7 @@ export class Subscriber implements IMessageProcessor {
 
   public async Subscribe<A extends WampList, K extends WampDict>(topic: WampURI, handler: EventHandler<A, K>, options?: SubscribeOptions): Promise<ISubscription> {
     if (this.closed) {
-      throw new Error("Subscriber already closed");
+      throw new Error('Subscriber already closed');
     }
     options = options || {};
     const requestID = this.idGen.session.ID();
@@ -139,16 +139,16 @@ export class Subscriber implements IMessageProcessor {
   public Close(): void {
     this.closed = true;
     for (const pendingSub of this.pendingSubscriptions) {
-      pendingSub[1][0].reject("subscriber closing");
+      pendingSub[1][0].reject('subscriber closing');
     }
     this.pendingSubscriptions.clear();
     for (const pendingUnsub of this.pendingUnsubscriptions) {
-      pendingUnsub[1].onUnsubscribed.reject("subscriber closing");
+      pendingUnsub[1].onUnsubscribed.reject('subscriber closing');
       this.currentSubscriptions.delete(pendingUnsub[1].subscriptionID);
     }
     this.pendingUnsubscriptions.clear();
     for (const currentSub of this.currentSubscriptions) {
-      currentSub[1].onUnsubscribed.reject("subscriber closing");
+      currentSub[1].onUnsubscribed.reject('subscriber closing');
     }
     this.currentSubscriptions.clear();
 
@@ -162,7 +162,7 @@ export class Subscriber implements IMessageProcessor {
       const requestID = msg[1];
       const [subPromise, handler] = this.pendingSubscriptions.get(requestID) || [null, null];
       if (subPromise === null) {
-        this.violator("unexpected SUBSCRIBED");
+        this.violator('unexpected SUBSCRIBED');
         return true;
       }
       const subId = msg[2];
@@ -180,7 +180,7 @@ export class Subscriber implements IMessageProcessor {
       const requestID = msg[2];
       const [subPromise] = this.pendingSubscriptions.get(requestID) || [null, null];
       if (subPromise === null) {
-        this.violator("unexpected SUBSCRIBE ERROR");
+        this.violator('unexpected SUBSCRIBE ERROR');
         return true;
       }
       subPromise.reject(msg[4]);
@@ -191,7 +191,7 @@ export class Subscriber implements IMessageProcessor {
       const subId = msg[1];
       const subscription = this.currentSubscriptions.get(subId);
       if (!subscription) {
-        this.violator("unexpected EVENT")
+        this.violator('unexpected EVENT')
         return true;
       }
 
@@ -207,7 +207,7 @@ export class Subscriber implements IMessageProcessor {
         const details = msg[2];
         const sub = this.currentSubscriptions.get(details.subscription);
         if (!sub) {
-          this.violator("unexpected router UNSUBSCRIBED");
+          this.violator('unexpected router UNSUBSCRIBED');
           return true;
         }
         sub.onUnsubscribed.resolve()
@@ -217,7 +217,7 @@ export class Subscriber implements IMessageProcessor {
         const sub = this.pendingUnsubscriptions.get(requestID);
         if (!sub) {
           // if the requestID couldn't be found, it's a protocol violation
-          this.violator("unexpected UNSUBSCRIBED");
+          this.violator('unexpected UNSUBSCRIBED');
           return true;
         }
         sub.onUnsubscribed.resolve();
@@ -229,7 +229,7 @@ export class Subscriber implements IMessageProcessor {
       const requestID = msg[2];
       const sub = this.pendingUnsubscriptions.get(requestID);
       if (!sub) {
-        this.violator("unexpected UNSUBSCRIBE ERROR");
+        this.violator('unexpected UNSUBSCRIBE ERROR');
         return true;
       }
       this.pendingUnsubscriptions.delete(requestID);

@@ -1,26 +1,22 @@
-import { IMessageProcessor, MessageSender, ProtocolViolator, IDGen} from './MessageProcessor';
-import { WampID, WampDict, WampList, EWampMessageID } from '../types/messages/MessageTypes';
-import { WampRegisterMessage, WampUnregisterMessage, RegisterOptions } from '../types/messages/RegisterMessage';
-import { InvocationDetails, WampYieldMessage } from '../types/messages/CallMessage';
-import { WampMessage, WampErrorMessage } from '../types/Protocol';
-import { IRegistration, CallHandler, CallResult } from '../types/Connection';
 import { Deferred } from 'queueable';
+
+import { IDGen, IMessageProcessor, MessageSender, ProtocolViolator } from './MessageProcessor';
+
+import { InvocationDetails, WampYieldMessage } from '../types/messages/CallMessage';
+import { EWampMessageID, WampDict, WampID, WampList } from '../types/messages/MessageTypes';
+import { RegisterOptions, WampRegisterMessage, WampUnregisterMessage } from '../types/messages/RegisterMessage';
+
+import { CallHandler, CallResult, IRegistration } from '../types/Connection';
+import { WampErrorMessage, WampMessage } from '../types/Protocol';
 
 class Registration implements IRegistration {
   public onUnregistered: Deferred<void>;
   constructor(
     private id: WampID,
     public handler: CallHandler<WampList, WampDict, WampList, WampDict>,
-    private unregister: (id: WampID) => void
+    private unregister: (id: WampID) => void,
   ) {
     this.reinitCatch();
-  }
-
-  private reinitCatch(err?: any) {
-    if (err !== "callee closing") {
-      this.onUnregistered = new Deferred<void>();
-      this.onUnregistered.promise.catch((err) => this.reinitCatch(err));
-    }
   }
 
   public Unregister(): Promise<void> {
@@ -34,6 +30,13 @@ class Registration implements IRegistration {
 
   public ID(): WampID {
     return this.id;
+  }
+
+  private reinitCatch(err?: any) {
+    if (err !== 'callee closing') {
+      this.onUnregistered = new Deferred<void>();
+      this.onUnregistered.promise.catch(e => this.reinitCatch(e));
+    }
   }
 }
 
@@ -83,7 +86,7 @@ class Call {
       EWampMessageID.INVOCATION,
       this.callid,
       {},
-      "wamp.error.runtime_error",
+      'wamp.error.runtime_error',
       [err],
       {},
     ];
@@ -128,11 +131,11 @@ export class Callee implements IMessageProcessor {
   public Close(): void {
     this.closed = true;
     for (const pendingReg of this.pendingRegistrations) {
-      pendingReg[1][0].reject("callee closing");
+      pendingReg[1][0].reject('callee closing');
     }
     this.pendingRegistrations.clear();
     for (const pendingUnreg of this.pendingUnregistrations) {
-      pendingUnreg[1].onUnregistered.reject("callee closing");
+      pendingUnreg[1].onUnregistered.reject('callee closing');
     }
     this.pendingUnregistrations.clear();
     for (const pendingCall of this.runningCalls) {
@@ -140,7 +143,7 @@ export class Callee implements IMessageProcessor {
     }
     this.runningCalls.clear();
     for (const currentReg of this.currentRegistrations) {
-      currentReg[1].onUnregistered.reject("callee closing");
+      currentReg[1].onUnregistered.reject('callee closing');
     }
     this.currentRegistrations.clear();
   }
@@ -152,7 +155,7 @@ export class Callee implements IMessageProcessor {
     RK extends WampDict
   >(uri: string, handler: CallHandler<A, K, RA, RK>, options?: RegisterOptions): Promise<IRegistration> {
     if (this.closed) {
-      return Promise.reject("callee closed");
+      return Promise.reject('callee closed');
     }
     const requestID = this.idGen.session.ID();
     const msg: WampRegisterMessage = [
@@ -175,7 +178,7 @@ export class Callee implements IMessageProcessor {
       const requestID = msg[1];
       const pendingReg = this.pendingRegistrations.get(requestID);
       if (!pendingReg) {
-        this.violator("unexpected REGISTERED");
+        this.violator('unexpected REGISTERED');
         return true;
       }
       this.pendingRegistrations.delete(requestID);
@@ -189,7 +192,7 @@ export class Callee implements IMessageProcessor {
       const requestID = msg[2];
       const pendingReg = this.pendingRegistrations.get(requestID);
       if (!pendingReg) {
-        this.violator("unexpected REGISTER ERROR");
+        this.violator('unexpected REGISTER ERROR');
         return true;
       }
       this.pendingRegistrations.delete(requestID);
@@ -202,7 +205,7 @@ export class Callee implements IMessageProcessor {
         const regID = msg[2].registration;
         const registration = this.currentRegistrations.get(regID);
         if (!registration) {
-          this.violator("unexpected router UNREGISTERED");
+          this.violator('unexpected router UNREGISTERED');
           return true;
         }
         this.currentRegistrations.delete(regID);
@@ -211,7 +214,7 @@ export class Callee implements IMessageProcessor {
         const requestID = msg[1];
         const registration = this.pendingUnregistrations.get(requestID);
         if (!registration) {
-          this.violator("unexpected UNREGISTERED");
+          this.violator('unexpected UNREGISTERED');
           return true;
         }
         this.pendingUnregistrations.delete(requestID);
@@ -224,7 +227,7 @@ export class Callee implements IMessageProcessor {
       const requestID = msg[2];
       const pendingUnreg = this.pendingUnregistrations.get(requestID);
       if (!pendingUnreg) {
-        this.violator("unexpected UNREGISTER ERROR");
+        this.violator('unexpected UNREGISTER ERROR');
         return true;
       }
       this.pendingUnregistrations.delete(requestID);
@@ -236,7 +239,7 @@ export class Callee implements IMessageProcessor {
       const regID = msg[2];
       const reg = this.currentRegistrations.get(regID);
       if (!reg) {
-        this.violator("unexpected INVOCATION");
+        this.violator('unexpected INVOCATION');
         return true;
       }
       const call = new Call(reg.handler, msg[4] || [], msg[5] || {}, msg[3] || {}, requestID, (cid, msg, finished) => {
@@ -254,7 +257,7 @@ export class Callee implements IMessageProcessor {
       const cid = msg[1];
       const call = this.runningCalls.get(cid);
       if (!call) {
-        this.violator("unexpected INTERRUPT");
+        this.violator('unexpected INTERRUPT');
         return true;
       }
       call.cancel();
@@ -265,7 +268,7 @@ export class Callee implements IMessageProcessor {
 
   private unregister(regID: WampID): void {
     if (this.closed) {
-      throw new Error("callee closed");
+      throw new Error('callee closed');
     }
     const requestID = this.idGen.session.ID();
     const reg = this.currentRegistrations.get(regID);

@@ -2,18 +2,18 @@ import { EWampMessageID } from '../types/messages/MessageTypes';
 import { StateMachine } from './StateMachine';
 
 export enum EConnectionState {
-  CLOSED = "CLOSED",
-  ETABLISHING = "ETABLISHING",
-  ESTABLISHED = "ETABLISHED",
-  CLOSING = "CLOSING",
-  ERROR = "ERROR",
-  AUTHENTICATING = "AUTHENTICATING",
-  CHALLENGING = "CHALLENGING",
+  CLOSED = 'CLOSED',
+  ETABLISHING = 'ETABLISHING',
+  ESTABLISHED = 'ETABLISHED',
+  CLOSING = 'CLOSING',
+  ERROR = 'ERROR',
+  AUTHENTICATING = 'AUTHENTICATING',
+  CHALLENGING = 'CHALLENGING',
 }
 
 export enum EMessageDirection {
-  RECEIVED = "RECEIVED",
-  SENT = "SENT",
+  RECEIVED = 'RECEIVED',
+  SENT = 'SENT',
 }
 
 const transitionFunction = (currentState: EConnectionState, args: [EMessageDirection, EWampMessageID]): EConnectionState => {

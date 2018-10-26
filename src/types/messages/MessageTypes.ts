@@ -33,7 +33,7 @@ export type WampDict = {
 export type WampList = Array<any>;
 
 export enum EMatchPolicy {
-  Wildcard = "wildcard",
-  Prefix = "prefix",
-  Exact = "",
+  Wildcard = 'wildcard',
+  Prefix = 'prefix',
+  Exact = '',
 }

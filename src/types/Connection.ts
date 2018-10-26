@@ -1,17 +1,19 @@
-import { IAuthProvider } from "./AuthProvider";
-import { WampID, WampDict, WampList } from "./messages/MessageTypes";
-import { PublishOptions } from "./messages/PublishMessage";
-import { SubscribeOptions } from './messages/SubscribeMessage';
-import { CallOptions, InvocationDetails, ECallKillMode } from './messages/CallMessage';
+import { IAuthProvider } from './AuthProvider';
+import { ISerializer } from './Serializer';
+import { ITransportFactory } from './Transport';
+
+import { WampDict, WampID, WampList } from './messages/MessageTypes';
+
+import { CallOptions, ECallKillMode, InvocationDetails } from './messages/CallMessage';
+import { PublishOptions } from './messages/PublishMessage';
 import { RegisterOptions } from './messages/RegisterMessage';
-import { ISerializer } from "./Serializer";
-import { ITransportFactory } from "./Transport";
+import { SubscribeOptions } from './messages/SubscribeMessage';
 
 export enum LogLevel {
-  DEBUG = "DEBUG",
-  INFO = "INFO",
-  WARNING = "WARNING",
-  ERROR = "ERROR",
+  DEBUG = 'DEBUG',
+  INFO = 'INFO',
+  WARNING = 'WARNING',
+  ERROR = 'ERROR',
 }
 
 export class ConnectionOpenError extends Error {
@@ -80,8 +82,28 @@ export interface IConnection {
 
   // TODO: Add methods to allow feature queries
   CancelCall(callid: WampID, mode: ECallKillMode): void;
-  Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: string, args?: A, kwArgs?: K, options?: CallOptions): [Promise<CallResult<RA, RK>>, WampID];
-  Register<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: string, handler: CallHandler<A, K, RA, RK>, options?: RegisterOptions): Promise<IRegistration>;
-  Publish<A extends WampList, K extends WampDict>(topic: string, args?: A, kwArgs?: K, options?: PublishOptions): Promise<IPublication>;
-  Subscribe<A extends WampList, K extends WampDict>(topic: string, handler: EventHandler<A, K>, options?: SubscribeOptions): Promise<ISubscription>;
+
+  Call<
+    A extends WampList,
+    K extends WampDict,
+    RA extends WampList,
+    RK extends WampDict
+  >(uri: string, args?: A, kwArgs?: K, options?: CallOptions): [Promise<CallResult<RA, RK>>, WampID];
+
+  Register<
+    A extends WampList,
+    K extends WampDict,
+    RA extends WampList,
+    RK extends WampDict
+  >(uri: string, handler: CallHandler<A, K, RA, RK>, options?: RegisterOptions): Promise<IRegistration>;
+
+  Publish<
+    A extends WampList,
+    K extends WampDict
+  >(topic: string, args?: A, kwArgs?: K, options?: PublishOptions): Promise<IPublication>;
+
+  Subscribe<
+    A extends WampList,
+    K extends WampDict
+  >(topic: string, handler: EventHandler<A, K>, options?: SubscribeOptions): Promise<ISubscription>;
 }

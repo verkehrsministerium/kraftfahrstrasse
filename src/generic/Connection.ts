@@ -24,7 +24,7 @@ import {
   ConnectionCloseError,
   ConnectionCloseInfo,
   LogLevel,
-} from "../types/Connection";
+} from '../types/Connection';
 
 import { ITransport, ETransportEventType } from '../types/Transport';
 import { Deferred } from 'queueable';
@@ -48,7 +48,7 @@ export class Connection implements IConnection {
 
     public Open(): Promise<void> {
       if (!!this.transport) {
-        return Promise.reject("Transport already opened or opening")
+        return Promise.reject('Transport already opened or opening')
       }
       this.transport = new this.connectionOptions.transport(
         this.connectionOptions.serializer,
@@ -71,14 +71,14 @@ export class Connection implements IConnection {
 
     public Close(): Promise<ConnectionCloseInfo> {
       if (!this.transport) {
-        return Promise.reject("transport is not open");
+        return Promise.reject('transport is not open');
       }
       this.transport.Send([
         EWampMessageID.GOODBYE,
         {
-          message: "client shutdown",
+          message: 'client shutdown',
         },
-        "wamp.close.normal",
+        'wamp.close.normal',
       ]);
       this.state.update([EMessageDirection.SENT, EWampMessageID.GOODBYE]);
       return this.OnClose();
@@ -86,14 +86,14 @@ export class Connection implements IConnection {
 
     public CancelCall(callid: WampID, mode?: ECallKillMode): void {
       if (!this.subHandlers) {
-        throw new Error("invalid session state");
+        throw new Error('invalid session state');
       }
       this.subHandlers[2].CancelCall(callid, mode);
     }
 
     public Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, args?: A, kwargs?: K, opts?: CallOptions): [Promise<CallResult<RA, RK>>, WampID] {
       if (!this.subHandlers) {
-        return [Promise.reject("invalid session state"), -1];
+        return [Promise.reject('invalid session state'), -1];
       }
       return this.subHandlers[2].Call(uri, args, kwargs, opts);
     }
@@ -105,19 +105,19 @@ export class Connection implements IConnection {
       RK extends WampDict
     >(uri: WampURI, handler: CallHandler<A, K, RA, RK>, opts?: RegisterOptions): Promise<IRegistration> {
       if (!this.subHandlers) {
-        return Promise.reject("invalid session state");
+        return Promise.reject('invalid session state');
       }
       return this.subHandlers[3].Register(uri, handler, opts);
     }
     public Subscribe<A extends WampList, K extends WampDict>(uri: WampURI, handler: EventHandler<A, K>, opts?: SubscribeOptions): Promise<ISubscription> {
       if (!this.subHandlers) {
-        return Promise.reject("invalid session state");
+        return Promise.reject('invalid session state');
       }
       return this.subHandlers[1].Subscribe(uri, handler, opts);
     }
     public Publish<A extends WampList, K extends WampDict>(uri: WampURI, args?: A, kwargs?: K, opts?: PublishOptions): Promise<IPublication> {
       if (!this.subHandlers) {
-        return Promise.reject("invalid session state");
+        return Promise.reject('invalid session state');
       }
       return this.subHandlers[0].Publish(uri, args, kwargs, opts);
     }
@@ -173,7 +173,7 @@ export class Connection implements IConnection {
       console.log(`Sending hello!`);
       const details: HelloMessageDetails = {
         roles: Object.assign({}, ...this.subFactories.map(j => j.GetFeatures())),
-        agent: "kraftfahrstrasse pre-alpha",
+        agent: 'kraftfahrstrasse pre-alpha',
       };
 
       if(!!this.connectionOptions.authProvider) {
@@ -227,24 +227,24 @@ export class Connection implements IConnection {
           this.transport.Send([
             EWampMessageID.GOODBYE,
             {
-              "message": "clean close",
+              'message': 'clean close',
             },
-            "wamp.close.goodbye_and_out",
+            'wamp.close.goodbye_and_out',
           ]);
           this.state.update([EMessageDirection.SENT, EWampMessageID.GOODBYE]);
-          this.transport.Close(1000, "wamp.close.normal");
+          this.transport.Close(1000, 'wamp.close.normal');
         }
         break;
         case EConnectionState.CLOSED: {
           // Clean close finished, actually close the transport, so onClose and close Callbacks will be created
-          this.transport.Close(1000, "wamp.close.normal");
+          this.transport.Close(1000, 'wamp.close.normal');
         }
         break;
         case EConnectionState.ERROR: {
           // protocol violation, so close the transport not clean (i.e. code 3000)
           // and if we encountered the error, send an ABORT message to the server
           if (msg[0] !== EWampMessageID.ABORT) {
-            this.handleProtocolViolation("protocol violation during session establish")
+            this.handleProtocolViolation('protocol violation during session establish')
           } else {
             this.transport.Close(3000, msg[2]);
             if (!!this.onOpen) {
@@ -269,8 +269,8 @@ export class Connection implements IConnection {
         }
       }
       if (!success) {
-        this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), "connection", `Unhandled message: ${JSON.stringify(msg)}`);
-        this.handleProtocolViolation("no handler found for message");
+        this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'connection', `Unhandled message: ${JSON.stringify(msg)}`);
+        this.handleProtocolViolation('no handler found for message');
       }
     }
 
@@ -278,13 +278,13 @@ export class Connection implements IConnection {
       const abortMessage: WampAbortMessage = [
         EWampMessageID.ABORT,
         {message: reason},
-        "wamp.error.protocol_violation",
+        'wamp.error.protocol_violation',
       ];
-      this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), "connection", `Protocol violation: ${reason}`);
+      this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'connection', `Protocol violation: ${reason}`);
       this.transport.Send(abortMessage);
-      this.transport.Close(3000, "protcol_violation");
+      this.transport.Close(3000, 'protcol_violation');
       if (!!this.onOpen) {
-        this.onOpen.reject(new ConnectionOpenError("protcol violation"));
+        this.onOpen.reject(new ConnectionOpenError('protcol violation'));
         this.onOpen = null;
       }
     }
