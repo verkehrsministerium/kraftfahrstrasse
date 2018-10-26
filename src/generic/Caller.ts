@@ -1,9 +1,11 @@
-import { IMessageProcessor, MessageSender, ProtocolViolator, IDGen } from './MessageProcessor';
-import { WampMessage } from '../types/Protocol';
-import { WampList, WampDict, WampURI, WampID, EWampMessageID } from '../types/messages/MessageTypes';
-import { CallOptions, WampCallMessage, ECallKillMode, WampCancelMessage } from '../types/messages/CallMessage';
-import { CallResult } from '../types/Connection';
 import { Deferred } from 'queueable';
+
+import { IDGen, IMessageProcessor, MessageSender, ProtocolViolator } from './MessageProcessor';
+
+import { CallResult } from '../types/Connection';
+import { CallOptions, ECallKillMode, WampCallMessage, WampCancelMessage } from '../types/messages/CallMessage';
+import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
+import { WampMessage } from '../types/Protocol';
 
 export class Caller implements IMessageProcessor {
   public static GetFeatures(): WampDict {
@@ -15,15 +17,15 @@ export class Caller implements IMessageProcessor {
           call_canceling: true,
           caller_identification: true,
           sharded_registration: true,
-        }
-      }
-    }
+        },
+      },
+    };
   }
 
   private pendingCalls = new Map<WampID, [Deferred<CallResult<WampList, WampDict>>, boolean]>();
   private closed = false;
 
-  constructor (private sender: MessageSender, private violator: ProtocolViolator, private idGen: IDGen) { }
+  constructor(private sender: MessageSender, private violator: ProtocolViolator, private idGen: IDGen) { }
 
   public Call<
     A extends WampList,

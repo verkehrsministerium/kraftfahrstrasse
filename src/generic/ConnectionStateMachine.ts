@@ -16,8 +16,7 @@ export enum EMessageDirection {
   SENT = 'SENT',
 }
 
-const transitionFunction = (currentState: EConnectionState, args: [EMessageDirection, EWampMessageID]): EConnectionState => {
-  console.log(`Update State:`, currentState, args[0], args[1]);
+const transitions = (currentState: EConnectionState, args: [EMessageDirection, EWampMessageID]): EConnectionState => {
   const [messageDirection, messageId] = args;
   switch (currentState) {
       case EConnectionState.CLOSED: {
@@ -70,6 +69,6 @@ const transitionFunction = (currentState: EConnectionState, args: [EMessageDirec
 
 export class ConnectionStateMachine extends StateMachine<EConnectionState, [EMessageDirection, EWampMessageID]> {
   constructor() {
-    super(EConnectionState.CLOSED, transitionFunction);
+    super(EConnectionState.CLOSED, transitions);
   }
 }

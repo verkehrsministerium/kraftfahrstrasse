@@ -1,10 +1,11 @@
-import { PublishOptions, WampPublishMessage } from '../types/messages/PublishMessage';
-import { WampID, WampURI, WampList, WampDict, EWampMessageID } from '../types/messages/MessageTypes';
-import { WampMessage } from '../types/Protocol';
-import { IPublication } from '../types/Connection';
-import { MessageSender, IMessageProcessor, ProtocolViolator, IDGen } from './MessageProcessor';
-
 import { Deferred } from 'queueable';
+
+import { IDGen, IMessageProcessor, MessageSender, ProtocolViolator } from './MessageProcessor';
+
+import { IPublication } from '../types/Connection';
+import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
+import { PublishOptions, WampPublishMessage } from '../types/messages/PublishMessage';
+import { WampMessage } from '../types/Protocol';
 
 export class Publication implements IPublication {
   private onPublished = new Deferred<WampID>();
@@ -45,16 +46,19 @@ export class Publisher implements IMessageProcessor {
           publisher_exclusion: true,
           publisher_identification: true,
           sharded_subscription: true,
-        }
-      }
-    }
+        },
+      },
+    };
   }
 
   private pendingPublications = new Map<number, Publication>();
   private closed = false;
   constructor(private sender: MessageSender, private violator: ProtocolViolator, private idGen: IDGen) {}
 
-  public async Publish<A extends WampList, K extends WampDict>(topic: WampURI, args?: A, kwArgs?: K, options?: PublishOptions): Promise<IPublication> {
+  public async Publish<
+    A extends WampList,
+    K extends WampDict
+  >(topic: WampURI, args?: A, kwArgs?: K, options?: PublishOptions): Promise<IPublication> {
     if (this.closed) {
       throw new Error('Publisher already closed');
     }

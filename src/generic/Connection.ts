@@ -1,34 +1,36 @@
-import { WampURI, EWampMessageID, WampList, WampDict, WampID } from '../types/messages/MessageTypes';
-import { WampHelloMessage, HelloMessageDetails } from '../types/messages/HelloMessage';
-import { PublishOptions } from '../types/messages/PublishMessage';
-import { SubscribeOptions } from '../types/messages/SubscribeMessage';
-import { RegisterOptions } from '../types/messages/RegisterMessage';
+import { Deferred } from 'queueable';
+
 import { CallOptions, ECallKillMode } from '../types/messages/CallMessage';
-import { WampMessage, WampAbortMessage, WampChallengeMessage } from '../types/Protocol';
-import { IMessageProcessorFactory, IDGen } from './MessageProcessor';
+import { HelloMessageDetails, WampHelloMessage } from '../types/messages/HelloMessage';
+import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
+import { PublishOptions } from '../types/messages/PublishMessage';
+import { RegisterOptions } from '../types/messages/RegisterMessage';
+import { SubscribeOptions } from '../types/messages/SubscribeMessage';
+import { WampAbortMessage, WampChallengeMessage, WampMessage } from '../types/Protocol';
+
+import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
+import { Callee } from './Callee';
+import { Caller } from './Caller';
+import { ConnectionStateMachine, EConnectionState, EMessageDirection } from './ConnectionStateMachine';
+import { IDGen, IMessageProcessorFactory } from './MessageProcessor';
 import { Publisher } from './Publisher';
 import { Subscriber } from './Subscriber';
-import { Caller } from './Caller';
-import { Callee } from './Callee';
-import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
+
 import {
-  IConnection,
-  ConnectionOptions,
-  CallResult,
   CallHandler,
-  IRegistration,
-  ISubscription,
-  EventHandler,
-  IPublication,
-  ConnectionOpenError,
+  CallResult,
   ConnectionCloseError,
   ConnectionCloseInfo,
+  ConnectionOpenError,
+  ConnectionOptions,
+  EventHandler,
+  IConnection,
+  IPublication,
+  IRegistration,
+  ISubscription,
   LogLevel,
 } from '../types/Connection';
-
-import { ITransport, ETransportEventType } from '../types/Transport';
-import { Deferred } from 'queueable';
-import { ConnectionStateMachine, EMessageDirection, EConnectionState } from './ConnectionStateMachine';
+import { ETransportEventType, ITransport } from '../types/Transport';
 
 export class Connection implements IConnection {
     private transport: ITransport;
@@ -42,13 +44,15 @@ export class Connection implements IConnection {
 
     private state: ConnectionStateMachine;
     constructor(private connectionOptions: ConnectionOptions) {
+      // TODO: Improve logging...
+      // tslint:disable-next-line
       this.connectionOptions.logFunction = this.connectionOptions.logFunction || console.log;
       this.connectionOptions.transportOptions = this.connectionOptions.transportOptions || {};
     }
 
     public Open(): Promise<void> {
       if (!!this.transport) {
-        return Promise.reject('Transport already opened or opening')
+        return Promise.reject('Transport already opened or opening');
       }
       this.transport = new this.connectionOptions.transport(
         this.connectionOptions.serializer,
@@ -56,7 +60,9 @@ export class Connection implements IConnection {
       );
       this.state = new ConnectionStateMachine();
       setTimeout(() => {
-        this.runConnection().then(() => console.log('Main loop exited'));
+        this.runConnection().catch(err => {
+          this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'Connection', `MainLoop error: ${err}`);
+        });
       }, 0);
       this.onOpen = new Deferred();
       return this.onOpen.promise;
@@ -67,7 +73,7 @@ export class Connection implements IConnection {
         this.onClose = new Deferred();
       }
       return this.onClose.promise;
-    };
+    }
 
     public Close(): Promise<ConnectionCloseInfo> {
       if (!this.transport) {
@@ -75,9 +81,7 @@ export class Connection implements IConnection {
       }
       this.transport.Send([
         EWampMessageID.GOODBYE,
-        {
-          message: 'client shutdown',
-        },
+        { message: 'client shutdown' },
         'wamp.close.normal',
       ]);
       this.state.update([EMessageDirection.SENT, EWampMessageID.GOODBYE]);
@@ -91,7 +95,12 @@ export class Connection implements IConnection {
       this.subHandlers[2].CancelCall(callid, mode);
     }
 
-    public Call<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, args?: A, kwargs?: K, opts?: CallOptions): [Promise<CallResult<RA, RK>>, WampID] {
+    public Call<
+      A extends WampList,
+      K extends WampDict,
+      RA extends WampList,
+      RK extends WampDict
+    >(uri: WampURI, args?: A, kwargs?: K, opts?: CallOptions): [Promise<CallResult<RA, RK>>, WampID] {
       if (!this.subHandlers) {
         return [Promise.reject('invalid session state'), -1];
       }
@@ -109,13 +118,19 @@ export class Connection implements IConnection {
       }
       return this.subHandlers[3].Register(uri, handler, opts);
     }
-    public Subscribe<A extends WampList, K extends WampDict>(uri: WampURI, handler: EventHandler<A, K>, opts?: SubscribeOptions): Promise<ISubscription> {
+    public Subscribe<
+      A extends WampList,
+      K extends WampDict
+    >(uri: WampURI, handler: EventHandler<A, K>, opts?: SubscribeOptions): Promise<ISubscription> {
       if (!this.subHandlers) {
         return Promise.reject('invalid session state');
       }
       return this.subHandlers[1].Subscribe(uri, handler, opts);
     }
-    public Publish<A extends WampList, K extends WampDict>(uri: WampURI, args?: A, kwargs?: K, opts?: PublishOptions): Promise<IPublication> {
+    public Publish<
+      A extends WampList,
+      K extends WampDict
+    >(uri: WampURI, args?: A, kwargs?: K, opts?: PublishOptions): Promise<IPublication> {
       if (!this.subHandlers) {
         return Promise.reject('invalid session state');
       }
@@ -125,20 +140,19 @@ export class Connection implements IConnection {
     private async runConnection(): Promise<void> {
       const endpoint = this.connectionOptions.endpoint;
       for await (const event of this.transport.Open(endpoint)) {
-        console.log(`Got event from transport: ${event.type}`);
         switch (event.type) {
           case ETransportEventType.OPEN: {
             this.sendHello();
+            break;
           }
-          break;
           case ETransportEventType.MESSAGE: {
             if (this.state.getState() === EConnectionState.ESTABLISHED) {
               await this.processMessage(event.message);
             } else {
               await this.processSessionMessage(event.message);
             }
+            break;
           }
-          break;
           case ETransportEventType.CLOSE: {
             this.transport = null;
             this.state = null;
@@ -156,12 +170,8 @@ export class Connection implements IConnection {
               }
               this.onClose = null;
             }
+            break;
           }
-          break;
-          case ETransportEventType.ERROR: {
-
-          }
-          break;
         }
         if (event.type === ETransportEventType.CLOSE) {
           break; // exit loop.
@@ -170,13 +180,12 @@ export class Connection implements IConnection {
     }
 
     private sendHello(): void {
-      console.log(`Sending hello!`);
       const details: HelloMessageDetails = {
         roles: Object.assign({}, ...this.subFactories.map(j => j.GetFeatures())),
         agent: 'kraftfahrstrasse pre-alpha',
       };
 
-      if(!!this.connectionOptions.authProvider) {
+      if (!!this.connectionOptions.authProvider) {
         details.authid = this.connectionOptions.authProvider.AuthID();
         details.authmethods = [this.connectionOptions.authProvider.AuthMethod()];
       }
@@ -202,17 +211,17 @@ export class Connection implements IConnection {
             signature.details || {},
           ]);
           this.state.update([EMessageDirection.SENT, EWampMessageID.AUTHENTICATE]);
+          break;
         }
-        break;
         case EConnectionState.ESTABLISHED: {
-          //TODO: Extract authentication and session ID from the message
+          // TODO: Extract authentication and session ID from the message
           this.idGen = {
             global: new GlobalIDGenerator(),
             session: new SessionIDGenerator(),
           };
-          this.subHandlers = this.subFactories.map(f => new f((msg) => {
-            this.transport.Send(msg);
-          }, (reason) => {
+          this.subHandlers = this.subFactories.map(handlerClass => new handlerClass(msgToSend => {
+            this.transport.Send(msgToSend);
+          }, reason => {
             this.handleProtocolViolation(reason);
           }, this.idGen)) as any; // this works.
           // this is, because map on tuples is not defined typesafe-ish.
@@ -220,31 +229,29 @@ export class Connection implements IConnection {
 
           this.onOpen.resolve();
           this.onOpen = null;
+          break;
         }
-        break;
         case EConnectionState.CLOSING: {
           // We received a GOODBYE message from the server, so reply with goodbye and shutdown the transport.
           this.transport.Send([
             EWampMessageID.GOODBYE,
-            {
-              'message': 'clean close',
-            },
+            { message: 'clean close' },
             'wamp.close.goodbye_and_out',
           ]);
           this.state.update([EMessageDirection.SENT, EWampMessageID.GOODBYE]);
           this.transport.Close(1000, 'wamp.close.normal');
+          break;
         }
-        break;
         case EConnectionState.CLOSED: {
           // Clean close finished, actually close the transport, so onClose and close Callbacks will be created
           this.transport.Close(1000, 'wamp.close.normal');
+          break;
         }
-        break;
         case EConnectionState.ERROR: {
           // protocol violation, so close the transport not clean (i.e. code 3000)
           // and if we encountered the error, send an ABORT message to the server
           if (msg[0] !== EWampMessageID.ABORT) {
-            this.handleProtocolViolation('protocol violation during session establish')
+            this.handleProtocolViolation('protocol violation during session establish');
           } else {
             this.transport.Close(3000, msg[2]);
             if (!!this.onOpen) {
@@ -252,8 +259,8 @@ export class Connection implements IConnection {
               this.onOpen = null;
             }
           }
+          break;
         }
-        break;
       }
     }
 
@@ -264,12 +271,18 @@ export class Connection implements IConnection {
       }
       let success = false;
       for (const subHandler of this.subHandlers) {
-        if (success = subHandler.ProcessMessage(msg)) {
+        success = subHandler.ProcessMessage(msg);
+        if (success) {
           break;
         }
       }
       if (!success) {
-        this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'connection', `Unhandled message: ${JSON.stringify(msg)}`);
+        this.connectionOptions.logFunction(
+          LogLevel.ERROR,
+          new Date(),
+          'connection',
+          `Unhandled message: ${JSON.stringify(msg)}`,
+        );
         this.handleProtocolViolation('no handler found for message');
       }
     }

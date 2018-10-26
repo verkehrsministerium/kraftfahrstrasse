@@ -54,6 +54,11 @@ class Call {
     kwArgs = kwArgs || {};
     details = details || {};
     details.onCancel = this.onCancel.promise;
+
+    // We want to actively catch rejected cancel promises.
+    // Rejecting this cancel promise means, that the call wasn't canceled and completed, so
+    // dropping any error is fine here.
+    // tslint:disable-next-line
     this.onCancel.promise.catch(() => {});
     this.progress = details && details.receive_progress;
 
@@ -61,6 +66,15 @@ class Call {
       handler(args, kwArgs, details).then(res => this.onHandlerResult(res), err => this.onHandlerError(err));
     }, 0);
   }
+
+  public cancel(): void {
+    if (this.cancelled) {
+      return;
+    }
+    this.cancelled = true;
+    this.onCancel.resolve();
+  }
+
   private onHandlerResult(res: CallResult<WampList, WampDict>): void {
     if (!!res.nextResult) {
       res.nextResult.then(r => this.onHandlerResult(r), err => this.onHandlerError(err));
@@ -69,9 +83,9 @@ class Call {
       const yieldmsg: WampYieldMessage = [
         EWampMessageID.YIELD,
         this.callid,
-        { progress: !!res.nextResult && this.progress, },
+        { progress: !!res.nextResult && this.progress },
         res.args || [],
-        res.kwArgs || {}
+        res.kwArgs || {},
       ];
       if (!res.nextResult && !this.cancelled) {
         this.onCancel.reject();
@@ -95,15 +109,9 @@ class Call {
     }
     this.sender(this.callid, errmsg, true);
   }
-
-  public cancel(): void {
-    if (this.cancelled) {
-      return;
-    }
-    this.cancelled = true;
-    this.onCancel.resolve();
-  }
 }
+
+declare type PendingRegistration = [Deferred<IRegistration>, CallHandler<WampList, WampDict, WampList, WampDict>];
 
 export class Callee implements IMessageProcessor {
   public static GetFeatures(): WampDict {
@@ -120,7 +128,7 @@ export class Callee implements IMessageProcessor {
       },
     };
   }
-  private pendingRegistrations = new Map<WampID, [Deferred<IRegistration>, CallHandler<WampList, WampDict, WampList, WampDict>]>();
+  private pendingRegistrations = new Map<WampID, PendingRegistration>();
   private currentRegistrations = new Map<WampID, Registration>();
   private pendingUnregistrations = new Map<WampID, Registration>();
   private runningCalls = new Map<WampID, Call>();
@@ -183,7 +191,7 @@ export class Callee implements IMessageProcessor {
       }
       this.pendingRegistrations.delete(requestID);
       const regID = msg[2];
-      const registration = new Registration(regID, pendingReg[1], (id) => this.unregister(id));
+      const registration = new Registration(regID, pendingReg[1], id => this.unregister(id));
       this.currentRegistrations.set(regID, registration);
       pendingReg[0].resolve(registration);
       return true;
@@ -242,14 +250,21 @@ export class Callee implements IMessageProcessor {
         this.violator('unexpected INVOCATION');
         return true;
       }
-      const call = new Call(reg.handler, msg[4] || [], msg[5] || {}, msg[3] || {}, requestID, (cid, msg, finished) => {
-        if (finished) {
-          this.runningCalls.delete(cid);
-        }
-        if (!this.closed) {
-          this.sender(msg);
-        }
-      });
+      const call = new Call(
+        reg.handler, // Call Handler function
+        msg[4] || [], // Args or empty array
+        msg[5] || {}, // KwArgs or empty object
+        msg[3] || {}, // Options or empty object
+        requestID,
+        (cid, msgToSend, finished) => {
+          if (finished) {
+            this.runningCalls.delete(cid);
+          }
+          if (!this.closed) {
+            this.sender(msgToSend);
+          }
+        },
+      );
       this.runningCalls.set(requestID, call);
       return true;
     }

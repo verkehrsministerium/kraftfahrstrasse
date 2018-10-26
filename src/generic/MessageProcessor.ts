@@ -1,5 +1,6 @@
-import { WampMessage } from '../types/Protocol';
 import { WampDict } from '../types/messages/MessageTypes';
+import { WampMessage } from '../types/Protocol';
+
 import { IIDGenerator } from '../util/id';
 
 export type MessageSender = (msg: WampMessage) => void;
