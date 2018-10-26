@@ -103,7 +103,16 @@ class Call {
 export class Callee implements IMessageProcessor {
   public static GetFeatures(): WampDict {
     return {
-      callee: {},
+      callee: {
+        progressive_call_results: true,
+        call_timeout: true,
+        call_canceling: true,
+        caller_identification: true,
+        call_trustlevels: true,
+        pattern_based_registration: true,
+        sharded_registration: true,
+        shared_registration: true,
+      },
     };
   }
   private pendingRegistrations = new Map<WampID, [Deferred<IRegistration>, CallHandler<WampList, WampDict, WampList, WampDict>]>();
