@@ -13,7 +13,17 @@ import {
   WampCallMessage,
   WampResultMessage,
   WampCancelMessage,
+  WampInvocationMessage,
+  WampYieldMessage,
+  WampInterruptMessage,
 } from './messages/CallMessage';
+
+import {
+  WampRegisterMessage,
+  WampRegisteredMessage,
+  WampUnregisterMessage,
+  WampUnregisteredMessage,
+} from './messages/RegisterMessage';
 
 export type WampAbortMessage = [EWampMessageID.ABORT, WampDict, WampURI];
 export type WampGoodbyeMessage = [EWampMessageID.GOODBYE, WampDict, WampURI];
@@ -38,4 +48,11 @@ export type WampMessage =
   WampCallMessage |
   WampResultMessage |
   WampCancelMessage |
+  WampRegisterMessage |
+  WampUnregisterMessage |
+  WampRegisteredMessage |
+  WampUnregisteredMessage |
+  WampInvocationMessage |
+  WampYieldMessage |
+  WampInterruptMessage |
   WampErrorMessage;

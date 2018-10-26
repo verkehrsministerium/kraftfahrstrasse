@@ -2,12 +2,14 @@ import { WampURI, EWampMessageID, WampList, WampDict, WampID } from '../types/me
 import { WampHelloMessage, HelloMessageDetails } from '../types/messages/HelloMessage';
 import { PublishOptions } from '../types/messages/PublishMessage';
 import { SubscribeOptions } from '../types/messages/SubscribeMessage';
+import { RegisterOptions } from '../types/messages/RegisterMessage';
 import { CallOptions, ECallKillMode } from '../types/messages/CallMessage';
 import { WampMessage, WampAbortMessage, WampChallengeMessage } from '../types/Protocol';
 import { IMessageProcessorFactory, IDGen } from './MessageProcessor';
 import { Publisher } from './Publisher';
 import { Subscriber } from './Subscriber';
 import { Caller } from './Caller';
+import { Callee } from './Callee';
 import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
 import {
   IConnection,
@@ -34,8 +36,8 @@ export class Connection implements IConnection {
     private onClose: Deferred<ConnectionCloseInfo>;
 
     // The type of subHandlers has to match the order of the Factories in subFactories
-    private subHandlers: [Publisher, Subscriber, Caller] = null;
-    private subFactories: IMessageProcessorFactory[] = [Publisher, Subscriber, Caller];
+    private subHandlers: [Publisher, Subscriber, Caller, Callee] = null;
+    private subFactories: IMessageProcessorFactory[] = [Publisher, Subscriber, Caller, Callee];
     private idGen: IDGen = null;
 
     private state: ConnectionStateMachine;
@@ -96,8 +98,16 @@ export class Connection implements IConnection {
       return this.subHandlers[2].Call(uri, args, kwargs, opts);
     }
 
-    public async Register<A extends WampList, K extends WampDict, RA extends WampList, RK extends WampDict>(uri: WampURI, handler: CallHandler<A, K, RA, RK>, opts: any): Promise<IRegistration> {
-      throw new Error("not implemented yet");
+    public Register<
+      A extends WampList,
+      K extends WampDict,
+      RA extends WampList,
+      RK extends WampDict
+    >(uri: WampURI, handler: CallHandler<A, K, RA, RK>, opts?: RegisterOptions): Promise<IRegistration> {
+      if (!this.subHandlers) {
+        return Promise.reject("invalid session state");
+      }
+      return this.subHandlers[3].Register(uri, handler, opts);
     }
     public Subscribe<A extends WampList, K extends WampDict>(uri: WampURI, handler: EventHandler<A, K>, opts?: SubscribeOptions): Promise<ISubscription> {
       if (!this.subHandlers) {

@@ -13,22 +13,27 @@ import { Deferred } from 'queueable';
 
 class MultiSubscription {
   private handlers = new Map<WampID, Subscription>();
-  public onUnsubscribed = new Deferred<void>();
+  public onUnsubscribed: Deferred<void>;
   private unsubscribed = false;
   constructor(public subscriptionID: WampID, private unsubscribe: (sub: MultiSubscription) => void) {
-    this.onUnsubscribed.promise.then(() => {
-      this.unsubscribed = true;
-      for (const sub of this.handlers) {
-        sub[1].onUnsubscribed.resolve();
-      }
-      this.handlers.clear();
-    }, err => {
-      this.unsubscribed = true;
-      for (const sub of this.handlers) {
-        sub[1].onUnsubscribed.reject(err);
-      }
-      this.handlers.clear();
-    });
+    this.reinitCatch();
+  }
+
+  private reinitCatch(): void {
+      this.onUnsubscribed = new Deferred<void>();
+      this.onUnsubscribed.promise.then(() => {
+        this.unsubscribed = true;
+        // This can happen in one of two cases, which is why the loop is necessary
+        // First, when the last subscriber unsubscribes, then this array is empty
+        // Second: when the router sends actively a UNSUBSCRIBED message to indicate that
+        // the subscription was revoked.
+        for (const sub of this.handlers) {
+          sub[1].onUnsubscribed.resolve();
+        }
+        this.handlers.clear();
+      }, () => {
+        this.reinitCatch();
+      });
   }
 
   public addSubscription(requestID: WampID, sub: Subscription): void {

@@ -7,6 +7,8 @@ export type SubscribeOptions = {
 
 export type EventDetails = {
   publisher?: WampID;
+  publisher_authid?: string;
+  publisher_authrole?: string | string[];
   trustlevel?: number;
   topic?: WampURI;
   retained?: boolean;
