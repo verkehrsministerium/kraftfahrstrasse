@@ -1,8 +1,10 @@
-import { ITransport, TransportEvent, ETransportEventType } from '../types/Transport';
-import { ISerializer, IsBinarySerializer } from '../types/Serializer';
-import { WampMessage } from '../types/Protocol';
-import { WampDict } from '../types/messages/MessageTypes';
 import { Channel } from 'queueable';
+
+import { WampDict } from '../types/messages/MessageTypes';
+
+import { WampMessage } from '../types/Protocol';
+import { IsBinarySerializer, ISerializer } from '../types/Serializer';
+import { ETransportEventType, ITransport, TransportEvent } from '../types/Transport';
 
 export class BrowserWebSocketTransport implements ITransport {
   private webSocket: WebSocket | null;
@@ -11,11 +13,11 @@ export class BrowserWebSocketTransport implements ITransport {
   }
 
   public Open(endpoint: string): AsyncIterableIterator<TransportEvent> {
-    console.log(`NodeWebSocketTransport open: ${endpoint}`);
     if (!!this.webSocket) {
       const channel = new Channel<TransportEvent>();
       channel.push({
         type: ETransportEventType.ERROR,
+
         error: 'Transport already opened!',
       });
       return channel;
@@ -26,36 +28,36 @@ export class BrowserWebSocketTransport implements ITransport {
       this.webSocket.binaryType = 'arraybuffer';
     }
     this.webSocket.onopen = () => {
-      console.log(`WS onopen`)
       this.channel.push({
         type: ETransportEventType.OPEN,
       });
-    }
-    this.webSocket.onmessage = (ev) => {
-      console.log(`WS onmessage: ${ev.data}`);
+    };
+    this.webSocket.onmessage = ev => {
       try {
         this.channel.push({
           type: ETransportEventType.MESSAGE,
+
           // FIXME: Report to TSC
           message: (this.serializer.Deserialize as any)(ev.data),
         });
       } catch (err) {
         this.channel.push({
           type: ETransportEventType.ERROR,
+
           error: err,
         });
       }
-    }
-    this.webSocket.onclose = (ev) => {
-      console.log(`WS onclose: ${ev.code} ${ev.reason} ${ev.wasClean}`);
+    };
+    this.webSocket.onclose = ev => {
       this.webSocket.onclose = null;
       this.channel.push({
+        type: ETransportEventType.CLOSE,
+
         code: ev.code,
         reason: ev.reason,
-        type: ETransportEventType.CLOSE,
         wasClean: ev.wasClean,
       });
-    }
+    };
     return this.channel;
   }
 
@@ -63,16 +65,16 @@ export class BrowserWebSocketTransport implements ITransport {
     this.webSocket.onclose = null;
     this.webSocket.close(code, reason);
     this.channel.push({
-      code: code,
-      reason: reason,
-      wasClean: true,
       type: ETransportEventType.CLOSE,
+
+      code,
+      reason,
+      wasClean: true,
     });
   }
 
   public Send(msg: WampMessage): void {
     const payload = this.serializer.Serialize(msg);
-    console.log(`Sending message: ${payload}`);
     this.webSocket.send(payload);
   }
 }

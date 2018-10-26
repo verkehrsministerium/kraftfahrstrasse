@@ -1,6 +1,7 @@
 import * as msgpackFactory from 'msgpack5';
-import { IBinarySerializer } from '../types/Serializer';
+
 import { WampMessage } from '../types/Protocol';
+import { IBinarySerializer } from '../types/Serializer';
 
 export class MSGPackSerializer implements IBinarySerializer {
   private msgpack: msgpackFactory.MessagePack;

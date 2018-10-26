@@ -1,5 +1,5 @@
-import { ITextSerializer } from '../types/Serializer';
 import { WampMessage } from '../types/Protocol';
+import { ITextSerializer } from '../types/Serializer';
 
 export class JSONSerializer implements ITextSerializer {
   public IsBinary(): boolean {
