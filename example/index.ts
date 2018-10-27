@@ -6,7 +6,7 @@ import {
 
   Connection,
   ConnectionCloseInfo,
- } from 'kraftfahrstrasse';
+} from 'kraftfahrstrasse';
 
 const connection = new Connection({
   endpoint: 'ws://localhost:4000',
