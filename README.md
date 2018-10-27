@@ -1,5 +1,6 @@
-# kraftfahrstrasse
-Typescript implementation of WAMP protocol.
+# kraftfahrstrasse - TypeScript WAMP client library for node/browsers
+
+[![Maintainability](https://api.codeclimate.com/v1/badges/b84ab82bb912d3ee92f7/maintainability)](https://codeclimate.com/github/Verkehrsministerium/kraftfahrstrasse/maintainability)
 
 ## Introduction
 
