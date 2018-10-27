@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "build/cjs",
+    "module": "commonjs",
+    "target": "esnext",
+    "sourceMap": true,
+    "inlineSourceMap": false
+  },
+  "include": [ "src" ]
+}

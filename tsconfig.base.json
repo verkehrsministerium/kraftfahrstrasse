@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "target": "esnext",
+    "module": "es2015",
+    "experimentalDecorators": true,
+    "noImplicitAny": true,
+    "lib": ["es2015", "es7", "esnext.asynciterable", "dom"],
+    "declaration": false,
+    "types": [],
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    "sourceMap": false,
+    "inlineSourceMap": true
+  },
+  "include": [
+    "src"
+  ]
+}
