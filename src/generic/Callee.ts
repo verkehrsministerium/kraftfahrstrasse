@@ -21,13 +21,13 @@ class Registration implements IRegistration {
   constructor(
     private id: WampID,
     public handler: CallHandler<WampList, WampDict, WampList, WampDict>,
-    private unregister: (id: WampID) => void,
+    private unregister: (reg: Registration) => void,
   ) {
     this.reinitCatch();
   }
 
   public Unregister(): Promise<void> {
-    this.unregister(this.id);
+    this.unregister(this);
     return this.OnUnregistered();
   }
 
@@ -118,8 +118,6 @@ class Call {
   }
 }
 
-declare type PendingRegistration = [Deferred<IRegistration>, CallHandler<WampList, WampDict, WampList, WampDict>];
-
 export class Callee extends MessageProcessor {
   public static GetFeatures(): WampDict {
     return {
@@ -154,7 +152,7 @@ export class Callee extends MessageProcessor {
   private currentRegistrations = new Map<WampID, Registration>();
   private runningCalls = new Map<WampID, Call>();
 
-  public Register<
+  public async Register<
     A extends WampList,
     K extends WampDict,
     RA extends WampList,
@@ -171,12 +169,11 @@ export class Callee extends MessageProcessor {
       uri,
     ];
     this.sender(msg);
-    return this.regs.PutAndResolve(requestID).then(registered => {
-      const regID = registered[2];
-      const registration = new Registration(regID, handler, id => this.unregister(id));
-      this.currentRegistrations.set(regID, registration);
-      return registration;
-    });
+    const registered = await this.regs.PutAndResolve(requestID);
+    const regID = registered[2];
+    const registration = new Registration(regID, handler, id => this.unregister(id));
+    this.currentRegistrations.set(regID, registration);
+    return registration;
   }
 
   protected onClose(): void {
@@ -208,8 +205,7 @@ export class Callee extends MessageProcessor {
       return true;
     }
     if (msg[0] === EWampMessageID.INVOCATION) {
-      const requestID = msg[1];
-      const regID = msg[2];
+      const [, requestID, regID, details, args, kwargs] = msg;
       const reg = this.currentRegistrations.get(regID);
       if (!reg) {
         this.violator('unexpected INVOCATION');
@@ -217,9 +213,9 @@ export class Callee extends MessageProcessor {
       }
       const call = new Call(
         reg.handler, // Call Handler function
-        msg[4] || [], // Args or empty array
-        msg[5] || {}, // KwArgs or empty object
-        msg[3] || {}, // Options or empty object
+        args || [], // Args or empty array
+        kwargs || {}, // KwArgs or empty object
+        details || {}, // Options or empty object
         requestID,
         (cid, msgToSend, finished) => {
           if (finished) {
@@ -238,30 +234,26 @@ export class Callee extends MessageProcessor {
       const call = this.runningCalls.get(cid);
       if (!call) {
         this.violator('unexpected INTERRUPT');
-        return true;
+      } else {
+        call.cancel();
       }
-      call.cancel();
       return true;
     }
     return false;
   }
 
-  private unregister(regID: WampID): void {
+  private unregister(reg: Registration): void {
     if (this.closed) {
       throw new Error('callee closed');
     }
     const requestID = this.idGen.session.ID();
-    const reg = this.currentRegistrations.get(regID);
-    if (!reg) {
-      return;
-    }
     const msg: WampUnregisterMessage = [
       EWampMessageID.UNREGISTER,
       requestID,
-      regID,
+      reg.ID(),
     ];
     this.unregs.PutAndResolve(requestID).then(() => {
-      this.currentRegistrations.delete(regID);
+      this.currentRegistrations.delete(reg.ID());
       reg.onUnregistered.resolve();
     }, err => {
       reg.onUnregistered.reject(err);
