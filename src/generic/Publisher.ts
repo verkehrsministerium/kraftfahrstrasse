@@ -1,6 +1,6 @@
 import { Deferred } from 'queueable';
 
-import { IDGen, IMessageProcessor, MessageSender, ProtocolViolator } from './MessageProcessor';
+import { MessageProcessor } from './MessageProcessor';
 
 import { IPublication } from '../types/Connection';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
@@ -37,7 +37,7 @@ export class Publication implements IPublication {
   }
 }
 
-export class Publisher implements IMessageProcessor {
+export class Publisher extends MessageProcessor {
   public static GetFeatures(): WampDict {
     return {
       publisher: {
@@ -52,8 +52,6 @@ export class Publisher implements IMessageProcessor {
   }
 
   private pendingPublications = new Map<number, Publication>();
-  private closed = false;
-  constructor(private sender: MessageSender, private violator: ProtocolViolator, private idGen: IDGen) {}
 
   public async Publish<
     A extends WampList,
@@ -83,28 +81,23 @@ export class Publisher implements IMessageProcessor {
     return publication;
   }
 
-  public Close(): void {
-    this.closed = true;
+  protected onClose(): void {
     for (const publication of this.pendingPublications) {
       publication[1].fail('publisher closing');
-      // TODO: log
     }
     this.pendingPublications.clear();
   }
 
-  public ProcessMessage(msg: WampMessage): boolean {
-    if (this.closed) {
-      return false;
-    }
+  protected onMessage(msg: WampMessage): boolean {
     if (msg[0] === EWampMessageID.PUBLISHED) {
       // Published, Sherlock
       const requestID = msg[1];
       const publication = this.pendingPublications.get(requestID);
-      this.pendingPublications.delete(requestID);
       if (!publication) {
         this.violator('invalid PUBLISHED message');
         return true;
       }
+      this.pendingPublications.delete(requestID);
       publication.acknowledge(msg[2]);
       return true;
     }
@@ -112,11 +105,11 @@ export class Publisher implements IMessageProcessor {
       // Publish error
       const requestID = msg[2];
       const publication = this.pendingPublications.get(requestID);
-      this.pendingPublications.delete(requestID);
       if (!publication) {
         this.violator('invalid ERROR PUBLISH message');
         return true;
       }
+      this.pendingPublications.delete(requestID);
       publication.fail(msg[4]);
       return true;
     }

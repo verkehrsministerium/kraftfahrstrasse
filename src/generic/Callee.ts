@@ -1,6 +1,6 @@
 import { Deferred } from 'queueable';
 
-import { IDGen, IMessageProcessor, MessageSender, ProtocolViolator } from './MessageProcessor';
+import { MessageProcessor } from './MessageProcessor';
 
 import { InvocationDetails, WampYieldMessage } from '../types/messages/CallMessage';
 import { EWampMessageID, WampDict, WampID, WampList } from '../types/messages/MessageTypes';
@@ -113,7 +113,7 @@ class Call {
 
 declare type PendingRegistration = [Deferred<IRegistration>, CallHandler<WampList, WampDict, WampList, WampDict>];
 
-export class Callee implements IMessageProcessor {
+export class Callee extends MessageProcessor {
   public static GetFeatures(): WampDict {
     return {
       callee: {
@@ -132,29 +132,6 @@ export class Callee implements IMessageProcessor {
   private currentRegistrations = new Map<WampID, Registration>();
   private pendingUnregistrations = new Map<WampID, Registration>();
   private runningCalls = new Map<WampID, Call>();
-
-  private closed = false;
-  constructor(private sender: MessageSender, private violator: ProtocolViolator, private idGen: IDGen) { }
-
-  public Close(): void {
-    this.closed = true;
-    for (const pendingReg of this.pendingRegistrations) {
-      pendingReg[1][0].reject('callee closing');
-    }
-    this.pendingRegistrations.clear();
-    for (const pendingUnreg of this.pendingUnregistrations) {
-      pendingUnreg[1].onUnregistered.reject('callee closing');
-    }
-    this.pendingUnregistrations.clear();
-    for (const pendingCall of this.runningCalls) {
-      pendingCall[1].cancel();
-    }
-    this.runningCalls.clear();
-    for (const currentReg of this.currentRegistrations) {
-      currentReg[1].onUnregistered.reject('callee closing');
-    }
-    this.currentRegistrations.clear();
-  }
 
   public Register<
     A extends WampList,
@@ -178,10 +155,26 @@ export class Callee implements IMessageProcessor {
     return deferred.promise;
   }
 
-  public ProcessMessage(msg: WampMessage): boolean {
-    if (this.closed) {
-      return false;
+  protected onClose(): void {
+    for (const pendingReg of this.pendingRegistrations) {
+      pendingReg[1][0].reject('callee closing');
     }
+    this.pendingRegistrations.clear();
+    for (const pendingUnreg of this.pendingUnregistrations) {
+      pendingUnreg[1].onUnregistered.reject('callee closing');
+    }
+    this.pendingUnregistrations.clear();
+    for (const pendingCall of this.runningCalls) {
+      pendingCall[1].cancel();
+    }
+    this.runningCalls.clear();
+    for (const currentReg of this.currentRegistrations) {
+      currentReg[1].onUnregistered.reject('callee closing');
+    }
+    this.currentRegistrations.clear();
+  }
+
+  protected onMessage(msg: WampMessage): boolean {
     if (msg[0] === EWampMessageID.REGISTERED) {
       const requestID = msg[1];
       const pendingReg = this.pendingRegistrations.get(requestID);

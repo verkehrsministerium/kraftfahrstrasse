@@ -1,13 +1,13 @@
 import { Deferred } from 'queueable';
 
-import { IDGen, IMessageProcessor, MessageSender, ProtocolViolator } from './MessageProcessor';
+import { MessageProcessor } from './MessageProcessor';
 
 import { CallResult } from '../types/Connection';
 import { CallOptions, ECallKillMode, WampCallMessage, WampCancelMessage } from '../types/messages/CallMessage';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
 
-export class Caller implements IMessageProcessor {
+export class Caller extends MessageProcessor {
   public static GetFeatures(): WampDict {
     return {
       caller: {
@@ -23,9 +23,6 @@ export class Caller implements IMessageProcessor {
   }
 
   private pendingCalls = new Map<WampID, [Deferred<CallResult<WampList, WampDict>>, boolean]>();
-  private closed = false;
-
-  constructor(private sender: MessageSender, private violator: ProtocolViolator, private idGen: IDGen) { }
 
   public Call<
     A extends WampList,
@@ -70,18 +67,14 @@ export class Caller implements IMessageProcessor {
     this.sender(msg);
   }
 
-  public Close(): void {
-    this.closed = true;
+  protected onClose(): void {
     for (const call of this.pendingCalls) {
       call[1][0].reject('caller closing');
     }
     this.pendingCalls.clear();
   }
 
-  public ProcessMessage(msg: WampMessage): boolean {
-    if (this.closed) {
-      return false;
-    }
+  protected onMessage(msg: WampMessage): boolean {
     if (msg[0] === EWampMessageID.ERROR && msg[1] === EWampMessageID.CALL) {
       const callid = msg[2];
       const call = this.pendingCalls.get(callid);

@@ -1,6 +1,6 @@
 import { Deferred } from 'queueable';
 
-import { IDGen, IMessageProcessor, MessageSender, ProtocolViolator } from './MessageProcessor';
+import { MessageProcessor } from './MessageProcessor';
 
 import {
   EventDetails,
@@ -97,7 +97,7 @@ class Subscription implements ISubscription {
   }
 }
 
-export class Subscriber implements IMessageProcessor {
+export class Subscriber extends MessageProcessor {
   public static GetFeatures(): WampDict {
     return {
       subscriber: {
@@ -112,12 +112,9 @@ export class Subscriber implements IMessageProcessor {
     };
   }
 
-  private closed = false;
   private pendingSubscriptions = new Map<WampID, [Deferred<Subscription>, EventHandler<WampList, WampDict>]>();
   private pendingUnsubscriptions = new Map<WampID, MultiSubscription>();
   private currentSubscriptions = new Map<WampID, MultiSubscription>();
-
-  constructor(private sender: MessageSender, private violator: ProtocolViolator, private idGen: IDGen) {}
 
   public async Subscribe<
     A extends WampList,
@@ -141,8 +138,7 @@ export class Subscriber implements IMessageProcessor {
     return pendingSubscription.promise;
   }
 
-  public Close(): void {
-    this.closed = true;
+  protected onClose(): void {
     for (const pendingSub of this.pendingSubscriptions) {
       pendingSub[1][0].reject('subscriber closing');
     }
@@ -156,13 +152,9 @@ export class Subscriber implements IMessageProcessor {
       currentSub[1].onUnsubscribed.reject('subscriber closing');
     }
     this.currentSubscriptions.clear();
-
   }
 
-  public ProcessMessage(msg: WampMessage): boolean {
-    if (this.closed) {
-      return false;
-    }
+  protected onMessage(msg: WampMessage): boolean {
     if (msg[0] === EWampMessageID.SUBSCRIBED) {
       const requestID = msg[1];
       const [subPromise, handler] = this.pendingSubscriptions.get(requestID) || [null, null];
