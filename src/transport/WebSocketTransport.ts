@@ -38,7 +38,7 @@ export abstract class WebSocketTransport implements ITransport {
 
       try {
         const msg = (this.serializer.Deserialize as any)(ev.data);
-        console.log("<=== RECEIVE MESSAGE:", msg);
+        // console.log("<=== RECEIVE MESSAGE:", msg);
         this.channel.push({
           type: ETransportEventType.MESSAGE,
           // FIXME: Report to TSC
@@ -78,7 +78,7 @@ export abstract class WebSocketTransport implements ITransport {
   }
 
   public Send(msg: WampMessage): void {
-    console.log("===> SENDING MESSAGE:", msg);
+    // console.log("===> SENDING MESSAGE:", msg);
     const payload = this.serializer.Serialize(msg);
     this.webSocket.send(payload);
   }
