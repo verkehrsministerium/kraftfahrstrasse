@@ -4,10 +4,17 @@ import { MessageProcessor } from './MessageProcessor';
 
 import { InvocationDetails, WampYieldMessage } from '../types/messages/CallMessage';
 import { EWampMessageID, WampDict, WampID, WampList } from '../types/messages/MessageTypes';
-import { RegisterOptions, WampRegisterMessage, WampUnregisterMessage } from '../types/messages/RegisterMessage';
+import {
+  RegisterOptions,
+  WampRegisteredMessage,
+  WampRegisterMessage,
+  WampUnregisteredMessage,
+  WampUnregisterMessage
+} from '../types/messages/RegisterMessage';
 
 import { CallHandler, CallResult, IRegistration } from '../types/Connection';
 import { WampErrorMessage, WampMessage } from '../types/Protocol';
+import { PendingMap } from '../util/map';
 
 class Registration implements IRegistration {
   public onUnregistered: Deferred<void>;
@@ -128,9 +135,23 @@ export class Callee extends MessageProcessor {
       },
     };
   }
-  private pendingRegistrations = new Map<WampID, PendingRegistration>();
+  private regs = new PendingMap<WampRegisteredMessage>(EWampMessageID.REGISTER, EWampMessageID.REGISTERED);
+  private unregs = new PendingMap<WampUnregisteredMessage>(
+    EWampMessageID.UNREGISTER,
+    EWampMessageID.UNREGISTERED,
+    msg => {
+      // Router induced unregister...
+      const regID = msg[2].registration;
+      const registration = this.currentRegistrations.get(regID);
+      if (!registration) {
+        return [false, 'unexpected router UNREGISTERED'];
+      }
+      this.currentRegistrations.delete(regID);
+      registration.onUnregistered.resolve();
+      return [true, null];
+    },
+  );
   private currentRegistrations = new Map<WampID, Registration>();
-  private pendingUnregistrations = new Map<WampID, Registration>();
   private runningCalls = new Map<WampID, Call>();
 
   public Register<
@@ -149,21 +170,18 @@ export class Callee extends MessageProcessor {
       options,
       uri,
     ];
-    const deferred = new Deferred<IRegistration>();
-    this.pendingRegistrations.set(requestID, [deferred, handler]);
     this.sender(msg);
-    return deferred.promise;
+    return this.regs.PutAndResolve(requestID).then(registered => {
+      const regID = registered[2];
+      const registration = new Registration(regID, handler, id => this.unregister(id));
+      this.currentRegistrations.set(regID, registration);
+      return registration;
+    });
   }
 
   protected onClose(): void {
-    for (const pendingReg of this.pendingRegistrations) {
-      pendingReg[1][0].reject('callee closing');
-    }
-    this.pendingRegistrations.clear();
-    for (const pendingUnreg of this.pendingUnregistrations) {
-      pendingUnreg[1].onUnregistered.reject('callee closing');
-    }
-    this.pendingUnregistrations.clear();
+    this.regs.Close();
+    this.unregs.Close();
     for (const pendingCall of this.runningCalls) {
       pendingCall[1].cancel();
     }
@@ -175,64 +193,18 @@ export class Callee extends MessageProcessor {
   }
 
   protected onMessage(msg: WampMessage): boolean {
-    if (msg[0] === EWampMessageID.REGISTERED) {
-      const requestID = msg[1];
-      const pendingReg = this.pendingRegistrations.get(requestID);
-      if (!pendingReg) {
-        this.violator('unexpected REGISTERED');
-        return true;
-      }
-      this.pendingRegistrations.delete(requestID);
-      const regID = msg[2];
-      const registration = new Registration(regID, pendingReg[1], id => this.unregister(id));
-      this.currentRegistrations.set(regID, registration);
-      pendingReg[0].resolve(registration);
-      return true;
-    }
-    if (msg[0] === EWampMessageID.ERROR && msg[1] === EWampMessageID.REGISTER) {
-      const requestID = msg[2];
-      const pendingReg = this.pendingRegistrations.get(requestID);
-      if (!pendingReg) {
-        this.violator('unexpected REGISTER ERROR');
-        return true;
-      }
-      this.pendingRegistrations.delete(requestID);
-      pendingReg[0].reject(msg[4]);
-      return true;
-    }
-    if (msg[0] === EWampMessageID.UNREGISTERED) {
-      if (msg[1] === 0) {
-        // Router induced unregister...
-        const regID = msg[2].registration;
-        const registration = this.currentRegistrations.get(regID);
-        if (!registration) {
-          this.violator('unexpected router UNREGISTERED');
-          return true;
-        }
-        this.currentRegistrations.delete(regID);
-        registration.onUnregistered.resolve();
-      } else {
-        const requestID = msg[1];
-        const registration = this.pendingUnregistrations.get(requestID);
-        if (!registration) {
-          this.violator('unexpected UNREGISTERED');
-          return true;
-        }
-        this.pendingUnregistrations.delete(requestID);
-        this.currentRegistrations.delete(registration.ID());
-        registration.onUnregistered.resolve();
+    let [handled, success, error] = this.regs.Handle(msg);
+    if (handled) {
+      if (!success) {
+        this.violator(error);
       }
       return true;
     }
-    if (msg[0] === EWampMessageID.ERROR && msg[1] === EWampMessageID.UNREGISTER) {
-      const requestID = msg[2];
-      const pendingUnreg = this.pendingUnregistrations.get(requestID);
-      if (!pendingUnreg) {
-        this.violator('unexpected UNREGISTER ERROR');
-        return true;
+    [handled, success, error] = this.regs.Handle(msg);
+    if (handled) {
+      if (!success) {
+        this.violator(error);
       }
-      this.pendingUnregistrations.delete(requestID);
-      pendingUnreg.onUnregistered.reject(msg[4]);
       return true;
     }
     if (msg[0] === EWampMessageID.INVOCATION) {
@@ -288,7 +260,12 @@ export class Callee extends MessageProcessor {
       requestID,
       regID,
     ];
-    this.pendingUnregistrations.set(requestID, reg);
+    this.unregs.PutAndResolve(requestID).then(() => {
+      this.currentRegistrations.delete(regID);
+      reg.onUnregistered.resolve();
+    }, err => {
+      reg.onUnregistered.reject(err);
+    });
     this.sender(msg);
   }
 }
