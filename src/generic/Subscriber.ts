@@ -5,13 +5,16 @@ import { MessageProcessor } from './MessageProcessor';
 import {
   EventDetails,
   SubscribeOptions,
+  WampSubscribedMessage,
   WampSubscribeMessage,
+  WampUnsubscribedMessage,
   WampUnsubscribeMessage,
 } from '../types/messages/SubscribeMessage';
 
 import { EventHandler, ISubscription } from '../types/Connection';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
+import { PendingMap }  from '../util/map';
 
 class MultiSubscription {
   public onUnsubscribed: Deferred<void>;
@@ -112,8 +115,21 @@ export class Subscriber extends MessageProcessor {
     };
   }
 
-  private pendingSubscriptions = new Map<WampID, [Deferred<Subscription>, EventHandler<WampList, WampDict>]>();
-  private pendingUnsubscriptions = new Map<WampID, MultiSubscription>();
+  private subs = new PendingMap<WampSubscribedMessage>(EWampMessageID.SUBSCRIBE, EWampMessageID.SUBSCRIBED);
+  private unsubs = new PendingMap<WampUnsubscribedMessage>(
+    EWampMessageID.UNSUBSCRIBE,
+    EWampMessageID.UNSUBSCRIBED,
+    (msg) => {
+      const details = msg[2];
+      const sub = this.currentSubscriptions.get(details.subscription);
+      if (!sub) {
+        return [false, 'unexpected router UNSUBSCRIBED'];
+      }
+      sub.onUnsubscribed.resolve();
+      this.currentSubscriptions.delete(details.subscription);
+      return [true, null];
+    }
+  );
   private currentSubscriptions = new Map<WampID, MultiSubscription>();
 
   public async Subscribe<
@@ -133,21 +149,20 @@ export class Subscriber extends MessageProcessor {
       topic,
     ];
     this.sender(msg);
-    const pendingSubscription = new Deferred<Subscription>();
-    this.pendingSubscriptions.set(requestID, [pendingSubscription, handler]);
-    return pendingSubscription.promise;
+    return this.subs.PutAndResolve(requestID).then(subscribed => {
+      const subId = subscribed[2];
+      let subscriptionWrapper = this.currentSubscriptions.get(subId);
+      if (!subscriptionWrapper) {
+        subscriptionWrapper = new MultiSubscription(subId, sub => this.sendUnsubscribe(sub));
+        this.currentSubscriptions.set(subId, subscriptionWrapper);
+      }
+      return new Subscription(handler, requestID, subscriptionWrapper);
+    });
   }
 
   protected onClose(): void {
-    for (const pendingSub of this.pendingSubscriptions) {
-      pendingSub[1][0].reject('subscriber closing');
-    }
-    this.pendingSubscriptions.clear();
-    for (const pendingUnsub of this.pendingUnsubscriptions) {
-      pendingUnsub[1].onUnsubscribed.reject('subscriber closing');
-      this.currentSubscriptions.delete(pendingUnsub[1].subscriptionID);
-    }
-    this.pendingUnsubscriptions.clear();
+    this.subs.Close();
+    this.unsubs.Close();
     for (const currentSub of this.currentSubscriptions) {
       currentSub[1].onUnsubscribed.reject('subscriber closing');
     }
@@ -155,35 +170,14 @@ export class Subscriber extends MessageProcessor {
   }
 
   protected onMessage(msg: WampMessage): boolean {
-    if (msg[0] === EWampMessageID.SUBSCRIBED) {
-      const requestID = msg[1];
-      const [subPromise, handler] = this.pendingSubscriptions.get(requestID) || [null, null];
-      if (subPromise === null) {
-        this.violator('unexpected SUBSCRIBED');
-        return true;
+    let [handled, success, error] = this.subs.Handle(msg);
+    if (handled) {
+      if (!success) {
+        this.violator(error);
       }
-      const subId = msg[2];
-      let subscriptionWrapper = this.currentSubscriptions.get(subId);
-      if (!subscriptionWrapper) {
-        subscriptionWrapper = new MultiSubscription(subId, sub => this.sendUnsubscribe(sub));
-        this.currentSubscriptions.set(subId, subscriptionWrapper);
-      }
-      const subscription = new Subscription(handler, requestID, subscriptionWrapper);
-      subPromise.resolve(subscription);
-      this.pendingSubscriptions.delete(requestID);
       return true;
     }
-    if (msg[0] === EWampMessageID.ERROR && msg[1] === EWampMessageID.SUBSCRIBE) {
-      const requestID = msg[2];
-      const [subPromise] = this.pendingSubscriptions.get(requestID) || [null, null];
-      if (subPromise === null) {
-        this.violator('unexpected SUBSCRIBE ERROR');
-        return true;
-      }
-      subPromise.reject(msg[4]);
-      this.pendingSubscriptions.delete(requestID);
-      return true;
-    }
+
     if (msg[0] === EWampMessageID.EVENT) {
       const subId = msg[1];
       const subscription = this.currentSubscriptions.get(subId);
@@ -197,43 +191,12 @@ export class Subscriber extends MessageProcessor {
       subscription.trigger(msg[4], msg[5], details);
       return true;
     }
-    if (msg[0] === EWampMessageID.UNSUBSCRIBED) {
-      const requestID = msg[1];
-      if (requestID === 0) {
-        // a requestID of zero means, that the subscription was revoked by the router
-        const details = msg[2];
-        const sub = this.currentSubscriptions.get(details.subscription);
-        if (!sub) {
-          this.violator('unexpected router UNSUBSCRIBED');
-          return true;
-        }
-        sub.onUnsubscribed.resolve();
-        this.currentSubscriptions.delete(details.subscription);
-      } else {
-        // requestID was actively set by the router
-        const sub = this.pendingUnsubscriptions.get(requestID);
-        if (!sub) {
-          // if the requestID couldn't be found, it's a protocol violation
-          this.violator('unexpected UNSUBSCRIBED');
-          return true;
-        }
-        sub.onUnsubscribed.resolve();
-        this.currentSubscriptions.delete(sub.subscriptionID);
-      }
-      return true;
+
+    [handled, success, error] = this.unsubs.Handle(msg);
+    if (handled && !success) {
+      this.violator(error);
     }
-    if (msg[0] === EWampMessageID.ERROR && msg[1] === EWampMessageID.UNSUBSCRIBE) {
-      const requestID = msg[2];
-      const sub = this.pendingUnsubscriptions.get(requestID);
-      if (!sub) {
-        this.violator('unexpected UNSUBSCRIBE ERROR');
-        return true;
-      }
-      this.pendingUnsubscriptions.delete(requestID);
-      sub.onUnsubscribed.reject(msg[4]);
-      return true;
-    }
-    return false;
+    return handled;
   }
 
   private sendUnsubscribe(sub: MultiSubscription): void {
@@ -243,7 +206,11 @@ export class Subscriber extends MessageProcessor {
       requestID,
       sub.subscriptionID,
     ];
-    this.pendingUnsubscriptions.set(requestID, sub);
+    this.unsubs.PutAndResolve(requestID).then(() => {
+      sub.onUnsubscribed.resolve();
+    }, err => {
+      sub.onUnsubscribed.reject(err);
+    });
     this.sender(msg);
   }
 }

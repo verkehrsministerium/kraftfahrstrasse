@@ -20,15 +20,21 @@ const connection = new Connection({
 
 const main = async () => {
   await connection.Open();
-  const sub = await connection.Subscribe('com.robulab.foo.baz', (args, kwargs, details) => {
+  const sub = await connection.Subscribe('foo.baz', (args, kwargs, details) => {
     console.log('Subscription:', args, kwargs, details);
   }, {});
-  const reg = await connection.Register('com.robulab.foo.bar', async (args, kwargs, details) => {
+  console.log("Subscribed:", sub);
+  const reg = await connection.Register('foo.bar', async (args, kwargs, details) => {
     console.log('Called with args:', args, kwargs, details);
-    await connection.Publish('com.robulab.foo.baz', args, kwargs, {
+    const pub = await connection.Publish('foo.baz', args, kwargs, {
       acknowledge: true,
       disclose_me: true,
+      exclude_me: false,
     });
+    console.log("publish sent:", pub);
+    pub.OnPublished().then(pub => {
+      console.log("publish acknowledge:", pub);
+    })
     return {
       args: null,
       kwArgs: null,
@@ -37,9 +43,12 @@ const main = async () => {
   }, {
     disclose_caller: true,
   });
-  setTimeout(async () => await connection.Call('com.robulab.foo.bar'), 1000);
+  setTimeout(async () => {
+    await connection.Call('foo.bar');
+    console.log("Call completed");
+  }, 1000);
   setTimeout(() => sub.Unsubscribe().then(() => console.log('Unsubscribed')), 10000);
-  const [res, cid] = connection.Call('com.robulab.target.get-online');
+  const [res, cid] = connection.Call('com.example.rpc');
   console.log(await res, cid);
   const closer = new Deferred<ConnectionCloseInfo>();
   setTimeout(async () => {

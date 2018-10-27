@@ -33,7 +33,7 @@ class Registration implements IRegistration {
   }
 
   private reinitCatch(err?: any) {
-    if (err !== 'callee closing') {
+    if (err !== 'closing') {
       this.onUnregistered = new Deferred<void>();
       this.onUnregistered.promise.catch(e => this.reinitCatch(e));
     }

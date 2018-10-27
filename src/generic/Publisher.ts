@@ -1,11 +1,11 @@
 import { Deferred } from 'queueable';
-
 import { MessageProcessor } from './MessageProcessor';
 
 import { IPublication } from '../types/Connection';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
-import { PublishOptions, WampPublishMessage } from '../types/messages/PublishMessage';
+import { PublishOptions, WampPublishedMessage, WampPublishMessage } from '../types/messages/PublishMessage';
 import { WampMessage } from '../types/Protocol';
+import { PendingMap } from '../util/map';
 
 export class Publication implements IPublication {
   private onPublished = new Deferred<WampID>();
@@ -51,7 +51,7 @@ export class Publisher extends MessageProcessor {
     };
   }
 
-  private pendingPublications = new Map<number, Publication>();
+  private publications = new PendingMap<WampPublishedMessage>(EWampMessageID.PUBLISH, EWampMessageID.PUBLISHED);
 
   public async Publish<
     A extends WampList,
@@ -76,43 +76,24 @@ export class Publisher extends MessageProcessor {
 
     const publication = new Publication(requestID, options.acknowledge);
     if (options.acknowledge) {
-      this.pendingPublications.set(requestID, publication);
+      this.publications.PutAndResolve(requestID).then(published => {
+        publication.acknowledge(published[2]);
+      }, err => {
+        publication.fail(err);
+      });
     }
     return publication;
   }
 
   protected onClose(): void {
-    for (const publication of this.pendingPublications) {
-      publication[1].fail('publisher closing');
-    }
-    this.pendingPublications.clear();
+    this.publications.Close();
   }
 
   protected onMessage(msg: WampMessage): boolean {
-    if (msg[0] === EWampMessageID.PUBLISHED) {
-      // Published, Sherlock
-      const requestID = msg[1];
-      const publication = this.pendingPublications.get(requestID);
-      if (!publication) {
-        this.violator('invalid PUBLISHED message');
-        return true;
-      }
-      this.pendingPublications.delete(requestID);
-      publication.acknowledge(msg[2]);
-      return true;
+    const [handled, success, error] = this.publications.Handle(msg);
+    if (handled && !success) {
+      this.violator(error);
     }
-    if (msg[0] === EWampMessageID.ERROR && msg[1] === EWampMessageID.PUBLISH) {
-      // Publish error
-      const requestID = msg[2];
-      const publication = this.pendingPublications.get(requestID);
-      if (!publication) {
-        this.violator('invalid ERROR PUBLISH message');
-        return true;
-      }
-      this.pendingPublications.delete(requestID);
-      publication.fail(msg[4]);
-      return true;
-    }
-    return false;
+    return handled;
   }
 }
