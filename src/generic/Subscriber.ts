@@ -14,7 +14,7 @@ import {
 import { EventHandler, ISubscription } from '../types/Connection';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
-import { PendingMap }  from '../util/map';
+import { PendingMap } from '../util/map';
 
 class MultiSubscription {
   public onUnsubscribed: Deferred<void>;
@@ -119,7 +119,7 @@ export class Subscriber extends MessageProcessor {
   private unsubs = new PendingMap<WampUnsubscribedMessage>(
     EWampMessageID.UNSUBSCRIBE,
     EWampMessageID.UNSUBSCRIBED,
-    (msg) => {
+    msg => {
       const details = msg[2];
       const sub = this.currentSubscriptions.get(details.subscription);
       if (!sub) {
@@ -128,7 +128,7 @@ export class Subscriber extends MessageProcessor {
       sub.onUnsubscribed.resolve();
       this.currentSubscriptions.delete(details.subscription);
       return [true, null];
-    }
+    },
   );
   private currentSubscriptions = new Map<WampID, MultiSubscription>();
 

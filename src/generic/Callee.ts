@@ -9,7 +9,7 @@ import {
   WampRegisteredMessage,
   WampRegisterMessage,
   WampUnregisteredMessage,
-  WampUnregisterMessage
+  WampUnregisterMessage,
 } from '../types/messages/RegisterMessage';
 
 import { CallHandler, CallResult, IRegistration } from '../types/Connection';
