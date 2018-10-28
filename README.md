@@ -1,6 +1,8 @@
 # kraftfahrstrasse - TypeScript WAMP client library for node/browsers
 
-[![Maintainability](https://api.codeclimate.com/v1/badges/b84ab82bb912d3ee92f7/maintainability)](https://codeclimate.com/github/Verkehrsministerium/kraftfahrstrasse/maintainability)
+[![Maintainability](https://api.codeclimate.com/v1/badges/b84ab82bb912d3ee92f7/maintainability)](https://codeclimate.com/github/Verkehrsministerium/kraftfahrstrasse/maintainability) 
+[![Travis (.org)](https://img.shields.io/travis/Verkehrsministerium/kraftfahrstrasse.svg)](https://travis-ci.org/Verkehrsministerium/kraftfahrstrasse)
+
 
 ## Introduction
 
