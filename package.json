@@ -1,5 +1,5 @@
 {
-  "name": "kraftfahrstrasse",
+  "name": "@verkehrsministerium/kraftfahrstrasse",
   "version": "0.0.1",
   "description": "WAMP implementation for TypeScript",
   "main": "build/cjs/index.js",
