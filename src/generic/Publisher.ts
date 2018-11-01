@@ -74,7 +74,7 @@ export class Publisher extends MessageProcessor {
     ];
     this.sender(msg);
 
-    const publication = new Publication(requestID, options.acknowledge);
+    const publication = new Publication(requestID, !!options.acknowledge);
     if (options.acknowledge) {
       this.publications.PutAndResolve(requestID).then(published => {
         publication.acknowledge(published[2]);

@@ -47,7 +47,7 @@ export type ConnectionOptions = {
 export type CallResult<TArgs extends WampList, TKwArgs extends WampDict> = {
   args: TArgs;
   kwArgs: TKwArgs;
-  nextResult?: Promise<CallResult<TArgs, TKwArgs>>;
+  nextResult?: Promise<CallResult<TArgs, TKwArgs>> | null;
 };
 
 export type CallHandler<

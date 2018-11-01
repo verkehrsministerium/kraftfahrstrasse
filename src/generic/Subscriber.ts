@@ -21,6 +21,7 @@ class MultiSubscription {
   private handlers = new Map<WampID, Subscription>();
   private unsubscribed = false;
   constructor(public subscriptionID: WampID, private unsubscribe: (sub: MultiSubscription) => void) {
+    this.onUnsubscribed = new Deferred<void>();
     this.reinitCatch();
   }
 
@@ -121,13 +122,16 @@ export class Subscriber extends MessageProcessor {
     EWampMessageID.UNSUBSCRIBED,
     msg => {
       const details = msg[2];
+      if (!details) {
+        return [false, 'invalid router UNSUBSCRIBED'];
+      }
       const sub = this.currentSubscriptions.get(details.subscription);
       if (!sub) {
         return [false, 'unexpected router UNSUBSCRIBED'];
       }
       sub.onUnsubscribed.resolve();
       this.currentSubscriptions.delete(details.subscription);
-      return [true, null];
+      return [true, ''];
     },
   );
   private currentSubscriptions = new Map<WampID, MultiSubscription>();
@@ -156,7 +160,7 @@ export class Subscriber extends MessageProcessor {
         subscriptionWrapper = new MultiSubscription(subId, sub => this.sendUnsubscribe(sub));
         this.currentSubscriptions.set(subId, subscriptionWrapper);
       }
-      return new Subscription(handler, requestID, subscriptionWrapper);
+      return new Subscription(handler as EventHandler<WampList, WampDict>, requestID, subscriptionWrapper);
     });
   }
 
@@ -188,7 +192,7 @@ export class Subscriber extends MessageProcessor {
 
       const details = msg[3];
       details.publicationId = msg[2];
-      subscription.trigger(msg[4], msg[5], details);
+      subscription.trigger(msg[4] || [], msg[5] || {}, details);
       return true;
     }
 
@@ -208,7 +212,7 @@ export class Subscriber extends MessageProcessor {
     ];
     this.unsubs.PutAndResolve(requestID).then(() => {
       sub.onUnsubscribed.resolve();
-    }, err => {
+    }, (err: any) => {
       sub.onUnsubscribed.reject(err);
     });
     this.sender(msg);

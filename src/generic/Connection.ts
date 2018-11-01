@@ -32,22 +32,30 @@ import {
 } from '../types/Connection';
 import { ETransportEventType, ITransport } from '../types/Transport';
 
+const createIdGens = () => {
+    return {
+      global: new GlobalIDGenerator(),
+      session: new SessionIDGenerator(),
+    };
+};
+
 export class Connection implements IConnection {
-    private transport: ITransport;
-    private onOpen: Deferred<void>;
-    private onClose: Deferred<ConnectionCloseInfo>;
+    private transport: ITransport | null = null;
+    private onOpen: Deferred<void> | null = null;
+    private onClose: Deferred<ConnectionCloseInfo> | null = null;
 
     // The type of subHandlers has to match the order of the Factories in subFactories
-    private subHandlers: [Publisher, Subscriber, Caller, Callee] = null;
+    private subHandlers: [Publisher, Subscriber, Caller, Callee] | null = null;
     private subFactories: IMessageProcessorFactory[] = [Publisher, Subscriber, Caller, Callee];
-    private idGen: IDGen = null;
 
+    private idGen: IDGen;
     private state: ConnectionStateMachine;
     constructor(private connectionOptions: ConnectionOptions) {
       // TODO: Improve logging...
       // tslint:disable-next-line
-      this.connectionOptions.logFunction = this.connectionOptions.logFunction || console.log;
       this.connectionOptions.transportOptions = this.connectionOptions.transportOptions || {};
+      this.state = new ConnectionStateMachine();
+      this.idGen = createIdGens();
     }
 
     public Open(): Promise<void> {
@@ -61,7 +69,9 @@ export class Connection implements IConnection {
       this.state = new ConnectionStateMachine();
       setTimeout(() => {
         this.runConnection().catch(err => {
-          this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'Connection', `MainLoop error: ${err}`);
+          if (!!this.connectionOptions.logFunction) {
+            this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'Connection', `MainLoop error: ${err}`);
+          }
         });
       }, 0);
       this.onOpen = new Deferred();
@@ -139,7 +149,7 @@ export class Connection implements IConnection {
 
     private async runConnection(): Promise<void> {
       const endpoint = this.connectionOptions.endpoint;
-      for await (const event of this.transport.Open(endpoint)) {
+      for await (const event of this.transport!.Open(endpoint)) {
         switch (event.type) {
           case ETransportEventType.OPEN: {
             this.sendHello();
@@ -155,9 +165,11 @@ export class Connection implements IConnection {
           }
           case ETransportEventType.CLOSE: {
             this.transport = null;
-            this.state = null;
-            this.subHandlers.forEach(h => h.Close());
-            this.subHandlers = null;
+            this.state = new ConnectionStateMachine();
+            if (!!this.subHandlers) {
+              this.subHandlers.forEach(h => h.Close());
+              this.subHandlers = null;
+            }
             if (!!this.onClose) {
               if (event.wasClean) {
                 this.onClose.resolve({
@@ -195,16 +207,19 @@ export class Connection implements IConnection {
         this.connectionOptions.realm,
         details,
       ];
-      this.transport.Send(msg);
+      this.transport!.Send(msg);
       this.state.update([EMessageDirection.SENT, EWampMessageID.HELLO]);
     }
 
     private async processSessionMessage(msg: WampMessage): Promise<void> {
+      if (!this.transport) {
+        return Promise.reject('transport closed');
+      }
       this.state.update([EMessageDirection.RECEIVED, msg[0]]);
       switch (this.state.getState()) {
         case EConnectionState.CHALLENGING: {
           const challengeMsg = msg as WampChallengeMessage;
-          const signature = await this.connectionOptions.authProvider.ComputeChallenge(challengeMsg[2]);
+          const signature = await this.connectionOptions.authProvider.ComputeChallenge(challengeMsg[2] || {});
           this.transport.Send([
             EWampMessageID.AUTHENTICATE,
             signature.signature,
@@ -214,20 +229,16 @@ export class Connection implements IConnection {
           break;
         }
         case EConnectionState.ESTABLISHED: {
-          // TODO: Extract authentication and session ID from the message
-          this.idGen = {
-            global: new GlobalIDGenerator(),
-            session: new SessionIDGenerator(),
-          };
+          this.idGen = createIdGens();
           this.subHandlers = this.subFactories.map(handlerClass => new handlerClass(msgToSend => {
-            this.transport.Send(msgToSend);
+            this.transport!.Send(msgToSend);
           }, reason => {
             this.handleProtocolViolation(reason);
           }, this.idGen)) as any; // this works.
           // this is, because map on tuples is not defined typesafe-ish.
           // Harr, Harr, Harr
 
-          this.onOpen.resolve();
+          this.onOpen!.resolve();
           this.onOpen = null;
           break;
         }
@@ -270,30 +281,45 @@ export class Connection implements IConnection {
         return;
       }
       let success = false;
-      for (const subHandler of this.subHandlers) {
+      for (const subHandler of this.subHandlers!) {
         success = subHandler.ProcessMessage(msg);
         if (success) {
           break;
         }
       }
       if (!success) {
-        this.connectionOptions.logFunction(
-          LogLevel.ERROR,
-          new Date(),
-          'connection',
-          `Unhandled message: ${JSON.stringify(msg)}`,
-        );
+        if (!!this.connectionOptions.logFunction) {
+          this.connectionOptions.logFunction(
+            LogLevel.ERROR,
+            new Date(),
+            'connection',
+            `Unhandled message: ${JSON.stringify(msg)}`,
+          );
+        }
         this.handleProtocolViolation('no handler found for message');
       }
     }
 
     private handleProtocolViolation(reason: WampURI): void {
+      if (!this.transport) {
+        if (!!this.connectionOptions.logFunction) {
+          this.connectionOptions.logFunction(
+            LogLevel.ERROR,
+            new Date(),
+            'connection',
+            'Failed to handle protocol violation: Already closed.',
+          );
+        }
+        return;
+      }
       const abortMessage: WampAbortMessage = [
         EWampMessageID.ABORT,
         {message: reason},
         'wamp.error.protocol_violation',
       ];
-      this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'connection', `Protocol violation: ${reason}`);
+      if (!!this.connectionOptions.logFunction) {
+        this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'connection', `Protocol violation: ${reason}`);
+      }
       this.transport.Send(abortMessage);
       this.transport.Close(3000, 'protcol_violation');
       if (!!this.onOpen) {

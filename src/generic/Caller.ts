@@ -45,7 +45,7 @@ export class Caller extends MessageProcessor {
       kwArgs || {},
     ];
     const result = new Deferred<CallResult<RA, RK>>();
-    this.pendingCalls.set(requestID, [result, details.receive_progress]);
+    this.pendingCalls.set(requestID, [result, !!details.receive_progress]);
     this.sender(msg);
     return [result.promise, requestID];
   }

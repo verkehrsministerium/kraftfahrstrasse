@@ -9,7 +9,7 @@ export interface IWebSocketFactory {
 }
 
 export abstract class WebSocketTransport implements ITransport {
-  protected webSocket: WebSocket;
+  protected webSocket: WebSocket | null = null;
   private channel = new Channel<TransportEvent>();
   constructor(private serializer: ISerializer, private webSocketFactory: IWebSocketFactory) {
   }
@@ -53,7 +53,7 @@ export abstract class WebSocketTransport implements ITransport {
       }
     };
     this.webSocket.onclose = ev => {
-      this.webSocket.onclose = null;
+      this.webSocket!.onclose = null;
       this.channel.push({
         type: ETransportEventType.CLOSE,
 
@@ -66,6 +66,9 @@ export abstract class WebSocketTransport implements ITransport {
   }
 
   public Close(code: number, reason: string): void {
+    if (!this.webSocket) {
+      return;
+    }
     this.webSocket.onclose = null;
     this.webSocket.close(code, reason);
     this.channel.push({
@@ -80,6 +83,6 @@ export abstract class WebSocketTransport implements ITransport {
   public Send(msg: WampMessage): void {
     // console.log("===> SENDING MESSAGE:", msg);
     const payload = this.serializer.Serialize(msg);
-    this.webSocket.send(payload);
+    this.webSocket!.send(payload);
   }
 }

@@ -17,13 +17,13 @@ import { WampErrorMessage, WampMessage } from '../types/Protocol';
 import { PendingMap } from '../util/map';
 
 class Registration implements IRegistration {
-  public onUnregistered: Deferred<void>;
+  public onUnregistered = new Deferred<void>();
   constructor(
     private id: WampID,
     public handler: CallHandler<WampList, WampDict, WampList, WampDict>,
     private unregister: (reg: Registration) => void,
   ) {
-    this.reinitCatch();
+    this.onUnregistered.promise.catch(e => this.reinitCatch(e));
   }
 
   public Unregister(): Promise<void> {
@@ -67,7 +67,7 @@ class Call {
     // dropping any error is fine here.
     // tslint:disable-next-line
     this.onCancel.promise.catch(() => {});
-    this.progress = details && details.receive_progress;
+    this.progress = details && !!details.receive_progress;
 
     setTimeout(() => {
       handler(args, kwArgs, details).then(res => this.onHandlerResult(res), err => this.onHandlerError(err));
@@ -138,6 +138,9 @@ export class Callee extends MessageProcessor {
     EWampMessageID.UNREGISTER,
     EWampMessageID.UNREGISTERED,
     msg => {
+      if (!msg[2]) {
+        return [false, 'invalid router UNREGISTERED'];
+      }
       // Router induced unregister...
       const regID = msg[2].registration;
       const registration = this.currentRegistrations.get(regID);
@@ -146,7 +149,7 @@ export class Callee extends MessageProcessor {
       }
       this.currentRegistrations.delete(regID);
       registration.onUnregistered.resolve();
-      return [true, null];
+      return [true, ''];
     },
   );
   private currentRegistrations = new Map<WampID, Registration>();
@@ -165,13 +168,13 @@ export class Callee extends MessageProcessor {
     const msg: WampRegisterMessage = [
       EWampMessageID.REGISTER,
       requestID,
-      options,
+      options || {},
       uri,
     ];
     this.sender(msg);
     const registered = await this.regs.PutAndResolve(requestID);
     const regID = registered[2];
-    const registration = new Registration(regID, handler, id => this.unregister(id));
+    const registration = new Registration(regID, handler as any, id => this.unregister(id));
     this.currentRegistrations.set(regID, registration);
     return registration;
   }

@@ -57,9 +57,9 @@ export class PendingMap<TSucMsg extends WampMessage> {
     return [false, true, ''];
   }
 
-  private getAndDelete(id: WampID): Deferred<TSucMsg> {
+  private getAndDelete(id: WampID): Deferred<TSucMsg> | null {
     const val = this.pendings.get(id);
     this.pendings.delete(id);
-    return val;
+    return val || null;
   }
 }
