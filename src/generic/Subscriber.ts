@@ -211,6 +211,7 @@ export class Subscriber extends MessageProcessor {
       sub.subscriptionID,
     ];
     this.unsubs.PutAndResolve(requestID).then(() => {
+      this.currentSubscriptions.delete(sub.subscriptionID);
       sub.onUnsubscribed.resolve();
     }, (err: any) => {
       sub.onUnsubscribed.reject(err);
