@@ -5,7 +5,7 @@ import { ISerializer } from '../types/Serializer';
 import { WebSocketTransport } from './WebSocketTransport';
 
 export class NodeWebSocketTransport extends WebSocketTransport {
-  constructor(serializer: ISerializer, _: WampDict) {
+  constructor(serializer: ISerializer, _?: WampDict) {
     super(serializer, WebSocket as any);
   }
 }

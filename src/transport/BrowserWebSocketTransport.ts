@@ -3,7 +3,7 @@ import { ISerializer } from '../types/Serializer';
 import { WebSocketTransport } from './WebSocketTransport';
 
 export class BrowserWebSocketTransport extends WebSocketTransport {
-  constructor(serializer: ISerializer, _: WampDict) {
+  constructor(serializer: ISerializer, _?: WampDict) {
     super(serializer, WebSocket);
   }
 }
