@@ -36,9 +36,8 @@ const main = async () => {
       console.log("publish acknowledge:", pub);
     })
     return {
-      args: null,
-      kwArgs: null,
-      nextResult: null,
+      args: [],
+      kwArgs: {},
     };
   }, {
     disclose_caller: true,
