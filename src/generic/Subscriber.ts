@@ -29,16 +29,23 @@ class MultiSubscription {
     if (this.unsubscribed) {
       throw new Error('Subscription is already destroyed');
     }
+
     this.handlers.set(requestID, sub);
+    console.log('AddMultiSubscription:', requestID, this.handlers);
   }
 
   public async Unsubscribe(requestID: WampID): Promise<void> {
+    console.log('Trying to remove MultiSubscription:', requestID, this.handlers);
+
     const sub = this.handlers.get(requestID);
     if (!sub) {
-      throw new Error('no such subscription');
+      throw new Error('no such subscription: ' + requestID);
     }
+
     this.handlers.delete(requestID);
     if (this.handlers.size === 0) {
+      console.log('RemoveMultiSubscription:', requestID);
+
       this.onUnsubscribed.promise.then(() => {
         sub.onUnsubscribed.resolve();
       }, err => {
@@ -88,9 +95,12 @@ class Subscription implements ISubscription {
     private parent: MultiSubscription,
   ) {
     this.parent.addSubscription(requestID, this);
+
+    console.log('RequestId for Subscribe: ', this.requestID);
   }
 
   public Unsubscribe(): Promise<void> {
+    console.log('RequestId for Unsubscribe: ', this.requestID);
     return this.parent.Unsubscribe(this.requestID);
   }
   public OnUnsubscribed(): Promise<void> {
