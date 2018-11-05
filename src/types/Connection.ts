@@ -7,8 +7,16 @@ import { WampDict, WampID, WampList } from './messages/MessageTypes';
 import { CallOptions, ECallKillMode, InvocationDetails } from './messages/CallMessage';
 import { PublishOptions } from './messages/PublishMessage';
 import { RegisterOptions } from './messages/RegisterMessage';
-import { SubscribeOptions } from './messages/SubscribeMessage';
-
+import { EventDetails, SubscribeOptions } from './messages/SubscribeMessage';
+export {
+  CallOptions,
+  InvocationDetails,
+  PublishOptions,
+  RegisterOptions,
+  SubscribeOptions,
+  ECallKillMode,
+  EventDetails,
+};
 export enum LogLevel {
   DEBUG = 'DEBUG',
   INFO = 'INFO',
@@ -57,7 +65,10 @@ export type CallHandler<
   TRKwA extends WampDict
 > = (args: TA, kwArgs: TKwA, details: InvocationDetails) => Promise<CallResult<TRA, TRKwA>>;
 
-export type EventHandler<TA extends WampList, TKwA extends WampDict> = (args: TA, kwArgs: TKwA, details: any) => void;
+export type EventHandler<
+  TA extends WampList,
+  TKwA extends WampDict
+> = (args: TA, kwArgs: TKwA, details: EventDetails) => void;
 
 export interface IRegistration {
   Unregister(): Promise<void>;
