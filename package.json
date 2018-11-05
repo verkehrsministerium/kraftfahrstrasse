@@ -1,6 +1,6 @@
 {
   "name": "@verkehrsministerium/kraftfahrstrasse",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "WAMP implementation for TypeScript",
   "main": "build/cjs/index.js",
   "module": "build/module/index.js",
