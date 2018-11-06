@@ -9,7 +9,7 @@
  */
 
 // Export basic types
-export { WampID, WampURI, WampDict, WampList } from './types/messages/MessageTypes';
+export {WampID, WampURI, WampDict, WampList} from './types/messages/MessageTypes';
 
 // Export public interfaces to interact with the library
 export * from './types/Serializer';
@@ -17,20 +17,22 @@ export * from './types/Transport';
 export * from './types/AuthProvider';
 export * from './types/Connection';
 
+export {WelcomeDetails} from './types/messages/WelcomeMessage';
+
 // Export different transports
-export { BrowserWebSocketTransport } from './transport/BrowserWebSocketTransport';
-export { NodeWebSocketTransport } from './transport/NodeWebSocketTransport';
+export {BrowserWebSocketTransport} from './transport/BrowserWebSocketTransport';
+export {NodeWebSocketTransport} from './transport/NodeWebSocketTransport';
 
 // Export different serializers
-export { JSONSerializer } from './serialize/JSON';
-export { MSGPackSerializer } from './serialize/MSGPack';
+export {JSONSerializer} from './serialize/JSON';
+export {MSGPackSerializer} from './serialize/MSGPack';
 
 // Export the different authentication providers
-export { TransportLevelProvider } from './auth/TransportProvider';
-export { TLSAuthProvider } from './auth/TLS';
-export { TicketAuthProvider } from './auth/Ticket';
-export { CookieAuthProvider } from './auth/Cookie';
-export { AnonymousAuthProvider } from './auth/Anonymous';
+export {TransportLevelProvider} from './auth/TransportProvider';
+export {TLSAuthProvider} from './auth/TLS';
+export {TicketAuthProvider} from './auth/Ticket';
+export {CookieAuthProvider} from './auth/Cookie';
+export {AnonymousAuthProvider} from './auth/Anonymous';
 
 // Export the main connection object
-export { Connection } from './generic/Connection';
+export {Connection} from './generic/Connection';

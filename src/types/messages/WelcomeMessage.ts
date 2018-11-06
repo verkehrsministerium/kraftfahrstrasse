@@ -1,4 +1,4 @@
-import { EWampMessageID, WampID } from './MessageTypes';
+import {EWampMessageID, WampDict, WampID} from './MessageTypes';
 
 export type WelcomeDetails = {
   roles: {
@@ -10,6 +10,7 @@ export type WelcomeDetails = {
   authrole?: string | string[],
   authmethod?: string,
   authprovider?: string,
+  authextra?: WampDict,
 };
 
 export type WampWelcomeMessage = [EWampMessageID.WELCOME, WampID, WelcomeDetails];
