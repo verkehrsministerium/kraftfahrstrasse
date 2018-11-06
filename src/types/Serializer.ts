@@ -20,3 +20,4 @@ export interface IBinarySerializer extends IBaseSerializer {
 }
 
 export type ISerializer = ITextSerializer | IBinarySerializer;
+export { WampMessage };
