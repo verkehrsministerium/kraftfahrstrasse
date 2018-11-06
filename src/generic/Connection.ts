@@ -1,20 +1,20 @@
-import { Deferred } from 'queueable';
+import {Deferred} from 'queueable';
 
-import { CallOptions, ECallKillMode } from '../types/messages/CallMessage';
-import { HelloMessageDetails, WampHelloMessage } from '../types/messages/HelloMessage';
-import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
-import { PublishOptions } from '../types/messages/PublishMessage';
-import { RegisterOptions } from '../types/messages/RegisterMessage';
-import { SubscribeOptions } from '../types/messages/SubscribeMessage';
-import { WampAbortMessage, WampChallengeMessage, WampMessage } from '../types/Protocol';
+import {CallOptions, ECallKillMode} from '../types/messages/CallMessage';
+import {HelloMessageDetails, WampHelloMessage} from '../types/messages/HelloMessage';
+import {EWampMessageID, WampDict, WampID, WampList, WampURI} from '../types/messages/MessageTypes';
+import {PublishOptions} from '../types/messages/PublishMessage';
+import {RegisterOptions} from '../types/messages/RegisterMessage';
+import {SubscribeOptions} from '../types/messages/SubscribeMessage';
+import {WampAbortMessage, WampChallengeMessage, WampMessage} from '../types/Protocol';
 
-import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
-import { Callee } from './Callee';
-import { Caller } from './Caller';
-import { ConnectionStateMachine, EConnectionState, EMessageDirection } from './ConnectionStateMachine';
-import { IDGen, IMessageProcessorFactory } from './MessageProcessor';
-import { Publisher } from './Publisher';
-import { Subscriber } from './Subscriber';
+import {GlobalIDGenerator, SessionIDGenerator} from '../util/id';
+import {Callee} from './Callee';
+import {Caller} from './Caller';
+import {ConnectionStateMachine, EConnectionState, EMessageDirection} from './ConnectionStateMachine';
+import {IDGen, IMessageProcessorFactory} from './MessageProcessor';
+import {Publisher} from './Publisher';
+import {Subscriber} from './Subscriber';
 
 import {
   CallHandler,
@@ -30,7 +30,8 @@ import {
   ISubscription,
   LogLevel,
 } from '../types/Connection';
-import { ETransportEventType, ITransport } from '../types/Transport';
+import {WampWelcomeMessage, WelcomeDetails} from '../types/messages/WelcomeMessage';
+import {ETransportEventType, ITransport} from '../types/Transport';
 
 const createIdGens = () => {
     return {
@@ -41,7 +42,7 @@ const createIdGens = () => {
 
 export class Connection implements IConnection {
     private transport: ITransport | null = null;
-    private onOpen: Deferred<void> | null = null;
+    private onOpen: Deferred<WelcomeDetails> | null = null;
     private onClose: Deferred<ConnectionCloseInfo> | null = null;
 
     // The type of subHandlers has to match the order of the Factories in subFactories
@@ -58,7 +59,7 @@ export class Connection implements IConnection {
       this.idGen = createIdGens();
     }
 
-    public Open(): Promise<void> {
+    public Open(): Promise<WelcomeDetails> {
       if (!!this.transport) {
         return Promise.reject('Transport already opened or opening');
       }
@@ -238,7 +239,8 @@ export class Connection implements IConnection {
           // this is, because map on tuples is not defined typesafe-ish.
           // Harr, Harr, Harr
 
-          this.onOpen!.resolve();
+          const estabishedMessage = msg as WampWelcomeMessage;
+          this.onOpen!.resolve(estabishedMessage[2]);
           this.onOpen = null;
           break;
         }

@@ -8,6 +8,7 @@ import { CallOptions, ECallKillMode, InvocationDetails } from './messages/CallMe
 import { PublishOptions } from './messages/PublishMessage';
 import { RegisterOptions } from './messages/RegisterMessage';
 import { EventDetails, SubscribeOptions } from './messages/SubscribeMessage';
+import {WelcomeDetails} from "./messages/WelcomeMessage";
 export {
   CallOptions,
   InvocationDetails,
@@ -87,7 +88,7 @@ export interface IPublication {
 }
 
 export interface IConnection {
-  Open(): Promise<void>;
+  Open(): Promise<WelcomeDetails>;
   Close(): Promise<ConnectionCloseInfo>;
   OnClose(): Promise<ConnectionCloseInfo>;
 
