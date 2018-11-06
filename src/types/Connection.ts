@@ -8,7 +8,7 @@ import { CallOptions, ECallKillMode, InvocationDetails } from './messages/CallMe
 import { PublishOptions } from './messages/PublishMessage';
 import { RegisterOptions } from './messages/RegisterMessage';
 import { EventDetails, SubscribeOptions } from './messages/SubscribeMessage';
-import {WelcomeDetails} from "./messages/WelcomeMessage";
+import {WelcomeDetails} from './messages/WelcomeMessage';
 export {
   CallOptions,
   InvocationDetails,
