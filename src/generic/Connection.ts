@@ -1,20 +1,20 @@
-import {Deferred} from 'queueable';
+import { Deferred } from 'queueable';
 
-import {CallOptions, ECallKillMode} from '../types/messages/CallMessage';
-import {HelloMessageDetails, WampHelloMessage} from '../types/messages/HelloMessage';
-import {EWampMessageID, WampDict, WampID, WampList, WampURI} from '../types/messages/MessageTypes';
-import {PublishOptions} from '../types/messages/PublishMessage';
-import {RegisterOptions} from '../types/messages/RegisterMessage';
-import {SubscribeOptions} from '../types/messages/SubscribeMessage';
-import {WampAbortMessage, WampChallengeMessage, WampMessage} from '../types/Protocol';
+import { CallOptions, ECallKillMode } from '../types/messages/CallMessage';
+import { HelloMessageDetails, WampHelloMessage } from '../types/messages/HelloMessage';
+import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
+import { PublishOptions } from '../types/messages/PublishMessage';
+import { RegisterOptions } from '../types/messages/RegisterMessage';
+import { SubscribeOptions } from '../types/messages/SubscribeMessage';
+import { WampAbortMessage, WampChallengeMessage, WampMessage } from '../types/Protocol';
 
-import {GlobalIDGenerator, SessionIDGenerator} from '../util/id';
-import {Callee} from './Callee';
-import {Caller} from './Caller';
-import {ConnectionStateMachine, EConnectionState, EMessageDirection} from './ConnectionStateMachine';
-import {IDGen, IMessageProcessorFactory} from './MessageProcessor';
-import {Publisher} from './Publisher';
-import {Subscriber} from './Subscriber';
+import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
+import { Callee } from './Callee';
+import { Caller } from './Caller';
+import { ConnectionStateMachine, EConnectionState, EMessageDirection } from './ConnectionStateMachine';
+import { IDGen, IMessageProcessorFactory } from './MessageProcessor';
+import { Publisher } from './Publisher';
+import { Subscriber } from './Subscriber';
 
 import {
   CallHandler,
@@ -30,8 +30,8 @@ import {
   ISubscription,
   LogLevel,
 } from '../types/Connection';
-import {WampWelcomeMessage, WelcomeDetails} from '../types/messages/WelcomeMessage';
-import {ETransportEventType, ITransport} from '../types/Transport';
+import { WampWelcomeMessage, WelcomeDetails } from '../types/messages/WelcomeMessage';
+import { ETransportEventType, ITransport } from '../types/Transport';
 
 const createIdGens = () => {
     return {
@@ -71,7 +71,7 @@ export class Connection implements IConnection {
       setTimeout(() => {
         this.runConnection().catch(err => {
           if (!!this.connectionOptions.logFunction) {
-            this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'Connection', `MainLoop error: ${err}`);
+            this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'Connection', `MainLoop error: ${ err }`);
           }
         });
       }, 0);
@@ -295,7 +295,7 @@ export class Connection implements IConnection {
             LogLevel.ERROR,
             new Date(),
             'connection',
-            `Unhandled message: ${JSON.stringify(msg)}`,
+            `Unhandled message: ${ JSON.stringify(msg)}`,
           );
         }
         this.handleProtocolViolation('no handler found for message');
@@ -316,11 +316,11 @@ export class Connection implements IConnection {
       }
       const abortMessage: WampAbortMessage = [
         EWampMessageID.ABORT,
-        {message: reason},
+        { message: reason },
         'wamp.error.protocol_violation',
       ];
       if (!!this.connectionOptions.logFunction) {
-        this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'connection', `Protocol violation: ${reason}`);
+        this.connectionOptions.logFunction(LogLevel.ERROR, new Date(), 'connection', `Protocol violation: ${reason }`);
       }
       this.transport.Send(abortMessage);
       this.transport.Close(3000, 'protcol_violation');

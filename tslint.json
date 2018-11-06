@@ -5,6 +5,7 @@
     "arrow-parens": [true, "ban-single-arg-parens"],
     "interface-over-type-literal": false,
     "max-classes-per-file": [true, 3, "exclude-class-expressions"],
-    "object-literal-sort-keys": false
+    "object-literal-sort-keys": false,
+    "whitespace": [true, "check-branch", "check-decl", "check-operator", "check-module", "check-separator", "check-type", "check-type-operators", "check-preblock"]
   }
 }
