@@ -48,6 +48,9 @@ typings/
 # Optional REPL history
 .node_repl_history
 
+# Certs Folder
+certs/
+
 # Output of 'npm pack'
 *.tgz
 
