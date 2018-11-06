@@ -1,17 +1,22 @@
-import { Channel } from 'queueable';
+import {Channel} from 'queueable';
 
-import { WampMessage } from '../types/Protocol';
-import { IsBinarySerializer, ISerializer } from '../types/Serializer';
-import { ETransportEventType, ITransport, TransportEvent } from '../types/Transport';
+import {WampDict} from '..';
+import {WampMessage} from '../types/Protocol';
+import {IsBinarySerializer, ISerializer} from '../types/Serializer';
+import {ETransportEventType, ITransport, TransportEvent} from '../types/Transport';
 
 export interface IWebSocketFactory {
-  new (endpoint: string, protocol?: string | string[]): WebSocket;
+  new(endpoint: string, protocol?: string | string[], transportOptions?: WampDict): WebSocket;
 }
 
 export abstract class WebSocketTransport implements ITransport {
   protected webSocket: WebSocket | null = null;
   private channel = new Channel<TransportEvent>();
-  constructor(private serializer: ISerializer, private webSocketFactory: IWebSocketFactory) {
+
+  constructor(
+    private serializer: ISerializer,
+    private webSocketFactory: IWebSocketFactory,
+    private transportOptions?: WampDict) {
   }
 
   public Open(endpoint: string): AsyncIterableIterator<TransportEvent> {
@@ -25,7 +30,7 @@ export abstract class WebSocketTransport implements ITransport {
       return channel;
     }
 
-    this.webSocket = new this.webSocketFactory(endpoint, this.serializer.ProtocolID());
+    this.webSocket = new this.webSocketFactory(endpoint, this.serializer.ProtocolID(), this.transportOptions);
     if (IsBinarySerializer(this.serializer)) {
       this.webSocket.binaryType = 'arraybuffer';
     }
