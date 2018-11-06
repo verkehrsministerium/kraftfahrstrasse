@@ -15,8 +15,7 @@
     "build:docs": "typedoc --out docs --readme README.md --target esnext --theme default --mode file src --ignoreCompilerErrors",
     "lint": "tslint -c tslint.json src/**/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "example": "ts-node -r tsconfig-paths/register -P tsconfig.example.json example/$*",
-    "example:resumetoken": "ts-node -r tsconfig-paths/register -P tsconfig.example.json example/resumeToken.ts"
+    "example": "ts-node -r tsconfig-paths/register -P tsconfig.example.json example/$*"
   },
   "repository": {
     "type": "git",
