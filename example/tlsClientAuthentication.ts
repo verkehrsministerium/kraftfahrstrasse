@@ -9,7 +9,7 @@ import {
   ConnectionCloseInfo,
 } from 'kraftfahrstrasse';
 
-import {readFileSync} from "fs";
+import { readFileSync } from "fs";
 
 const connection = new Connection({
   endpoint: 'wss://localhost:8000',

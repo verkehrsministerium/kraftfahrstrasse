@@ -1,9 +1,9 @@
-import {Channel} from 'queueable';
+import { Channel } from 'queueable';
 
-import {WampDict} from '..';
-import {WampMessage} from '../types/Protocol';
-import {IsBinarySerializer, ISerializer} from '../types/Serializer';
-import {ETransportEventType, ITransport, TransportEvent} from '../types/Transport';
+import { WampDict } from '..';
+import { WampMessage } from '../types/Protocol';
+import { IsBinarySerializer, ISerializer } from '../types/Serializer';
+import { ETransportEventType, ITransport, TransportEvent } from '../types/Transport';
 
 export interface IWebSocketFactory {
   new(endpoint: string, protocol?: string | string[], transportOptions?: WampDict): WebSocket;
