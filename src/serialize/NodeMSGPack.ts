@@ -3,7 +3,7 @@ import * as msgpackFactory from 'msgpack5';
 import { WampMessage } from '../types/Protocol';
 import { IBinarySerializer } from '../types/Serializer';
 
-export class MSGPackSerializer implements IBinarySerializer {
+export class NodeMSGPackSerializer implements IBinarySerializer {
   private msgpack: msgpackFactory.MessagePack;
   constructor() {
     this.msgpack = msgpackFactory({
