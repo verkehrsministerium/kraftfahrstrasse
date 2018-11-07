@@ -68,6 +68,7 @@ export class Connection implements IConnection {
         this.connectionOptions.transportOptions,
       );
       this.state = new ConnectionStateMachine();
+      this.onOpen = new Deferred();
       setTimeout(() => {
         this.runConnection().catch(err => {
           if (!!this.connectionOptions.logFunction) {
@@ -75,7 +76,6 @@ export class Connection implements IConnection {
           }
         });
       }, 0);
-      this.onOpen = new Deferred();
       return this.onOpen.promise;
     }
 
@@ -166,12 +166,16 @@ export class Connection implements IConnection {
           }
           case ETransportEventType.CLOSE: {
             this.transport = null;
+            const state = this.state.getState();
             this.state = new ConnectionStateMachine();
             if (!!this.subHandlers) {
               this.subHandlers.forEach(h => h.Close());
               this.subHandlers = null;
             }
-            if (!!this.onClose) {
+            if (state !== EConnectionState.ESTABLISHED && !!this.onOpen) {
+              this.onOpen.reject(event.reason);
+              this.onOpen = null;
+            } else if (!!this.onClose) {
               if (event.wasClean) {
                 this.onClose.resolve({
                   code: event.code,
