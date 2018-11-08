@@ -1,7 +1,7 @@
 # kraftfahrstrasse - TypeScript WAMP client library for node/browsers
 
-[![Maintainability](https://api.codeclimate.com/v1/badges/b84ab82bb912d3ee92f7/maintainability)](https://codeclimate.com/github/Verkehrsministerium/kraftfahrstrasse/maintainability) 
-[![Travis (.org)](https://img.shields.io/travis/Verkehrsministerium/kraftfahrstrasse.svg)](https://travis-ci.org/Verkehrsministerium/kraftfahrstrasse) [![Join the chat at https://gitter.im/Verkehrsministerium/kraftfahrstrasse](https://badges.gitter.im/Verkehrsministerium/kraftfahrstrasse.svg)](https://gitter.im/Verkehrsministerium/kraftfahrstrasse?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Maintainability](https://api.codeclimate.com/v1/badges/b84ab82bb912d3ee92f7/maintainability)](https://codeclimate.com/github/verkehrsministerium/kraftfahrstrasse/maintainability) 
+[![Travis (.org)](https://img.shields.io/travis/Verkehrsministerium/kraftfahrstrasse.svg)](https://travis-ci.org/Verkehrsministerium/kraftfahrstrasse) [![Join the chat at https://gitter.im/Verkehrsministerium/kraftfahrstrasse](https://badges.gitter.im/verkehrsministerium/kraftfahrstrasse.svg)](https://gitter.im/verkehrsministerium/kraftfahrstrasse?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 
 ## Introduction
