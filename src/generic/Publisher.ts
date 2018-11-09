@@ -1,4 +1,4 @@
-import { Deferred } from 'queueable';
+import { Deferred } from '@verkehrsministerium/queueable';
 import { MessageProcessor } from './MessageProcessor';
 
 import { IPublication } from '../types/Connection';

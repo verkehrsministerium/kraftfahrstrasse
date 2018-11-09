@@ -1,4 +1,4 @@
-import { Channel } from 'queueable';
+import { Channel } from '@verkehrsministerium/queueable';
 
 import { WampDict } from '..';
 import { WampMessage } from '../types/Protocol';

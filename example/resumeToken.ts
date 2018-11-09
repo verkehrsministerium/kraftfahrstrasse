@@ -10,7 +10,7 @@ import {
   WelcomeDetails,
 } from 'kraftfahrstrasse';
 
-import { Deferred } from 'queueable';
+import { Deferred } from '@verkehrsministerium/queueable';
 
 const tokenFunc = (authExtra: WampDict): Promise<Signature> => {
 

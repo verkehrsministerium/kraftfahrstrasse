@@ -43,8 +43,8 @@
   },
   "homepage": "https://github.com/Verkehrsministerium/kraftfahrstrasse#readme",
   "dependencies": {
+    "@verkehrsministerium/queueable": "^4.1.2",
     "msgpack5": "^4.2.1",
-    "queueable": "^4.1.1",
     "ws": "^6.1.0"
   },
   "devDependencies": {
