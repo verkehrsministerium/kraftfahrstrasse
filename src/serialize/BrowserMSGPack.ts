@@ -14,6 +14,7 @@ export class BrowserMSGPackSerializer implements IBinarySerializer {
     this.msgpack = msgpackFactory({
       forceFloat64: true,
     });
+    this.msgpack.register(42, ArrayBuffer, (buf: ArrayBufferLike) => buf, (buf: ArrayBufferLike) => buf);
   }
   public IsBinary(): boolean {
     return true;

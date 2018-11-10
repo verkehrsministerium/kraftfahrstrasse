@@ -9,6 +9,7 @@ export class NodeMSGPackSerializer implements IBinarySerializer {
     this.msgpack = msgpackFactory({
       forceFloat64: true,
     });
+    this.msgpack.register(42, ArrayBuffer, buf => buf as any, buf => buf);
   }
   public IsBinary(): boolean {
     return true;
