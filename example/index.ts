@@ -1,4 +1,5 @@
-import { Deferred } from '@verkehrsministerium/queueable';
+import { Deferred } from 'queueable';
+
 import {
   AnonymousAuthProvider,
   JSONSerializer,
@@ -6,7 +7,7 @@ import {
 
   Connection,
   ConnectionCloseInfo,
-} from 'kraftfahrstrasse';
+} from '@verkehrsministerium/kraftfahrstrasse';
 
 const connection = new Connection({
   endpoint: 'ws://localhost:4000',

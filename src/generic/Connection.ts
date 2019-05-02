@@ -1,4 +1,4 @@
-import { Deferred } from '@verkehrsministerium/queueable';
+import { Deferred } from 'queueable';
 
 import { CallOptions, ECallKillMode } from '../types/messages/CallMessage';
 import { HelloMessageDetails, WampHelloMessage } from '../types/messages/HelloMessage';

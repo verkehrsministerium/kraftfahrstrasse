@@ -1,13 +1,10 @@
-import { Deferred } from '@verkehrsministerium/queueable';
 import {
-  AnonymousAuthProvider,
   JSONSerializer,
   NodeWebSocketTransport,
 
   Connection,
   TLSAuthProvider,
-  ConnectionCloseInfo,
-} from 'kraftfahrstrasse';
+} from '@verkehrsministerium/kraftfahrstrasse';
 
 import { readFileSync } from "fs";
 

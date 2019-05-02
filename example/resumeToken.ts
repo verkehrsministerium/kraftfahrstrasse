@@ -8,9 +8,7 @@ import {
   TicketAuthProvider,
   WampDict,
   WelcomeDetails,
-} from 'kraftfahrstrasse';
-
-import { Deferred } from '@verkehrsministerium/queueable';
+} from '@verkehrsministerium/kraftfahrstrasse';
 
 const tokenFunc = (authExtra: WampDict): Promise<Signature> => {
 

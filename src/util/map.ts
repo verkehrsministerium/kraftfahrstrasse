@@ -1,4 +1,4 @@
-import { Deferred } from '@verkehrsministerium/queueable';
+import { Deferred } from 'queueable';
 
 import { EWampMessageID, WampID } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
