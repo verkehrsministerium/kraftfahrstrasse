@@ -8,7 +8,7 @@ import { RegisterOptions } from '../types/messages/RegisterMessage';
 import { SubscribeOptions } from '../types/messages/SubscribeMessage';
 import { WampAbortMessage, WampChallengeMessage, WampMessage } from '../types/Protocol';
 
-import Logger from '../logging/Logger';
+import { Logger } from '../logging/Logger';
 import {
   CallHandler,
   CallResult,
