@@ -200,7 +200,7 @@ export class Callee extends MessageProcessor {
       }
       return true;
     }
-    [handled, success, error] = this.regs.Handle(msg);
+    [handled, success, error] = this.unregs.Handle(msg);
     if (handled) {
       if (!success) {
         this.violator(error);
