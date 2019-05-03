@@ -1,4 +1,4 @@
-import { LogFunction, LogLevel } from '..';
+import { LogFunction, LogLevel } from '../types/Connection';
 
 class Logger {
 

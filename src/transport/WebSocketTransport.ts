@@ -1,6 +1,6 @@
 import { Channel } from 'queueable';
 
-import { WampDict } from '..';
+import { WampDict } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
 import { IsBinarySerializer, ISerializer } from '../types/Serializer';
 import { ETransportEventType, ITransport, TransportEvent } from '../types/Transport';
