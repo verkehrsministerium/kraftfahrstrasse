@@ -84,7 +84,7 @@ export interface ISubscription {
 }
 
 export interface IPublication {
-  OnPublished(): Promise<WampID>;
+  OnPublished(): Promise<WampID | null>;
 }
 
 export interface IConnection {

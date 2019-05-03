@@ -8,11 +8,11 @@ import { WampMessage } from '../types/Protocol';
 import { PendingMap } from '../util/map';
 
 export class Publication implements IPublication {
-  private onPublished = new Deferred<WampID>();
+  private onPublished = new Deferred<WampID | null>();
   private resolved = false;
   constructor(private requestID: WampID, expectAck: boolean) {
     if (!expectAck) {
-      this.onPublished.reject('acknowledge is not set, expecting no answer');
+      this.onPublished.resolve(null);
       this.resolved = true;
     }
   }
@@ -32,7 +32,7 @@ export class Publication implements IPublication {
     this.onPublished.resolve(publicationId);
   }
 
-  public OnPublished(): Promise<WampID> {
+  public OnPublished(): Promise<WampID | null> {
     return this.onPublished.promise;
   }
 }
