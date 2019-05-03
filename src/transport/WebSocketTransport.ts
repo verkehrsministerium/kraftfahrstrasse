@@ -14,9 +14,11 @@ export abstract class WebSocketTransport implements ITransport {
   private channel = new Channel<TransportEvent>();
 
   constructor(
+    public name: string,
     private serializer: ISerializer,
     private webSocketFactory: IWebSocketFactory,
-    private transportOptions?: WampDict) {
+    private transportOptions?: WampDict,
+  ) {
   }
 
   public Open(endpoint: string): AsyncIterableIterator<TransportEvent> {

@@ -1,7 +1,7 @@
 import { Deferred } from 'queueable';
 import { MessageProcessor } from './MessageProcessor';
 
-import { IPublication } from '../types/Connection';
+import { IPublication, LogLevel } from '../types/Connection';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { PublishOptions, WampPublishedMessage, WampPublishMessage } from '../types/messages/PublishMessage';
 import { WampMessage } from '../types/Protocol';
@@ -56,7 +56,7 @@ export class Publisher extends MessageProcessor {
   public async Publish<
     A extends WampList,
     K extends WampDict
-  >(topic: WampURI, args?: A, kwArgs?: K, options?: PublishOptions): Promise<IPublication> {
+    >(topic: WampURI, args?: A, kwArgs?: K, options?: PublishOptions): Promise<IPublication> {
     if (this.closed) {
       throw new Error('Publisher already closed');
     }
@@ -73,6 +73,7 @@ export class Publisher extends MessageProcessor {
       kwArgs || {},
     ];
     this.sender(msg);
+    this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Publishing ${topic}`);
 
     const publication = new Publication(requestID, !!options.acknowledge);
     if (options.acknowledge) {

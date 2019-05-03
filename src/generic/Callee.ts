@@ -12,7 +12,8 @@ import {
   WampUnregisterMessage,
 } from '../types/messages/RegisterMessage';
 
-import { CallHandler, CallResult, IRegistration } from '../types/Connection';
+import Logger from '../logging/Logger';
+import { CallHandler, CallResult, IRegistration, LogLevel } from '../types/Connection';
 import { WampErrorMessage, WampMessage } from '../types/Protocol';
 import { PendingMap } from '../util/map';
 
@@ -56,6 +57,7 @@ class Call {
     args: WampList, kwArgs: WampDict, details: InvocationDetails,
     public callid: WampID,
     private sender: (cid: number, msg: WampMessage, finish: boolean) => void,
+    private logger: Logger,
   ) {
     args = args || [];
     kwArgs = kwArgs || {};
@@ -98,6 +100,7 @@ class Call {
         this.onCancel.reject();
       }
       this.sender(this.callid, yieldmsg, !res.nextResult);
+      this.logger.log(LogLevel.DEBUG, `ID: ${this.callid}, Sending Yield`);
     }
   }
 
@@ -114,6 +117,7 @@ class Call {
     if (!this.cancelled) {
       this.onCancel.reject();
     }
+    this.logger.log(LogLevel.DEBUG, `ID: ${this.callid}, Sending Error`);
     this.sender(this.callid, errmsg, true);
   }
 }
@@ -160,7 +164,7 @@ export class Callee extends MessageProcessor {
     K extends WampDict,
     RA extends WampList,
     RK extends WampDict
-  >(uri: string, handler: CallHandler<A, K, RA, RK>, options?: RegisterOptions): Promise<IRegistration> {
+    >(uri: string, handler: CallHandler<A, K, RA, RK>, options?: RegisterOptions): Promise<IRegistration> {
     if (this.closed) {
       return Promise.reject('callee closed');
     }
@@ -171,6 +175,7 @@ export class Callee extends MessageProcessor {
       options || {},
       uri,
     ];
+    this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Registering ${uri}`);
     this.sender(msg);
     const registered = await this.regs.PutAndResolve(requestID);
     const regID = registered[2];
@@ -228,16 +233,20 @@ export class Callee extends MessageProcessor {
             this.sender(msgToSend);
           }
         },
+        this.logger,
       );
+
+      this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Received Call`);
       this.runningCalls.set(requestID, call);
       return true;
     }
     if (msg[0] === EWampMessageID.INTERRUPT) {
-      const cid = msg[1];
-      const call = this.runningCalls.get(cid);
+      const requestID = msg[1];
+      const call = this.runningCalls.get(requestID);
       if (!call) {
         this.violator('unexpected INTERRUPT');
       } else {
+        this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Received Cancellation Request`);
         call.cancel();
       }
       return true;
