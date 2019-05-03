@@ -44,19 +44,19 @@
   },
   "homepage": "https://github.com/verkehrsministerium/kraftfahrstrasse#readme",
   "dependencies": {
-    "queueable": "^4.1.2",
     "msgpack5": "^4.2.1",
-    "ws": "^6.1.0"
+    "queueable": "^4.1.2",
+    "ws": "^7.0.0"
   },
   "devDependencies": {
     "@types/msgpack5": "^3.4.1",
     "@types/ws": "^6.0.1",
     "queueable": "^4.1.2",
-    "ts-node": "^7.0.1",
-    "tsconfig-paths": "^3.6.0",
-    "tslint": "^5.11.0",
-    "typedoc": "^0.13.0",
-    "typescript": "^3.1.3",
-    "semantic-release": "^15.13.3"
+    "semantic-release": "^15.13.3",
+    "ts-node": "^8.1.0",
+    "tsconfig-paths": "^3.8.0",
+    "tslint": "^5.16.0",
+    "typedoc": "^0.14.2",
+    "typescript": "^3.4.5"
   }
 }

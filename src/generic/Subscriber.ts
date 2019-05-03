@@ -11,7 +11,8 @@ import {
   WampUnsubscribeMessage,
 } from '../types/messages/SubscribeMessage';
 
-import { EventHandler, ISubscription } from '../types/Connection';
+import Logger from '../logging/Logger';
+import { EventHandler, ISubscription, LogLevel } from '../types/Connection';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
 import { PendingMap } from '../util/map';
@@ -62,20 +63,20 @@ class MultiSubscription {
   }
 
   private reinitCatch(): void {
-      this.onUnsubscribed = new Deferred<void>();
-      this.onUnsubscribed.promise.then(() => {
-        this.unsubscribed = true;
-        // This can happen in one of two cases, which is why the loop is necessary
-        // First, when the last subscriber unsubscribes, then this array is empty
-        // Second: when the router sends actively a UNSUBSCRIBED message to indicate that
-        // the subscription was revoked.
-        for (const sub of this.handlers) {
-          sub[1].onUnsubscribed.resolve();
-        }
-        this.handlers.clear();
-      }, () => {
-        this.reinitCatch();
-      });
+    this.onUnsubscribed = new Deferred<void>();
+    this.onUnsubscribed.promise.then(() => {
+      this.unsubscribed = true;
+      // This can happen in one of two cases, which is why the loop is necessary
+      // First, when the last subscriber unsubscribes, then this array is empty
+      // Second: when the router sends actively a UNSUBSCRIBED message to indicate that
+      // the subscription was revoked.
+      for (const sub of this.handlers) {
+        sub[1].onUnsubscribed.resolve();
+      }
+      this.handlers.clear();
+    }, () => {
+      this.reinitCatch();
+    });
   }
 }
 
@@ -86,11 +87,13 @@ class Subscription implements ISubscription {
     public handler: EventHandler<WampList, WampDict>,
     private requestID: WampID,
     private parent: MultiSubscription,
+    private logger: Logger,
   ) {
     this.parent.addSubscription(requestID, this);
   }
 
   public Unsubscribe(): Promise<void> {
+    this.logger.log(LogLevel.DEBUG, `ID: ${this.requestID}, Unsubscribing...`);
     return this.parent.Unsubscribe(this.requestID);
   }
   public OnUnsubscribed(): Promise<void> {
@@ -139,7 +142,7 @@ export class Subscriber extends MessageProcessor {
   public async Subscribe<
     A extends WampList,
     K extends WampDict
-  >(topic: WampURI, handler: EventHandler<A, K>, options?: SubscribeOptions): Promise<ISubscription> {
+    >(topic: WampURI, handler: EventHandler<A, K>, options?: SubscribeOptions): Promise<ISubscription> {
     if (this.closed) {
       throw new Error('Subscriber already closed');
     }
@@ -155,12 +158,14 @@ export class Subscriber extends MessageProcessor {
     this.sender(msg);
     return this.subs.PutAndResolve(requestID).then(subscribed => {
       const subId = subscribed[2];
+      this.logger.log(LogLevel.DEBUG, `ID: ${subId}, Subscribing ${topic}`);
+
       let subscriptionWrapper = this.currentSubscriptions.get(subId);
       if (!subscriptionWrapper) {
         subscriptionWrapper = new MultiSubscription(subId, sub => this.sendUnsubscribe(sub));
         this.currentSubscriptions.set(subId, subscriptionWrapper);
       }
-      return new Subscription(handler as EventHandler<WampList, WampDict>, requestID, subscriptionWrapper);
+      return new Subscription(handler as EventHandler<WampList, WampDict>, requestID, subscriptionWrapper, this.logger);
     });
   }
 
@@ -190,9 +195,11 @@ export class Subscriber extends MessageProcessor {
         return true;
       }
 
+      this.logger.log(LogLevel.DEBUG, `Subscription ID: ${subId}, Received Event`);
       const details = msg[3];
       details.publicationId = msg[2];
       subscription.trigger(msg[4] || [], msg[5] || {}, details);
+
       return true;
     }
 

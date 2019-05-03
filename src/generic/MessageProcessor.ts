@@ -1,6 +1,7 @@
 import { WampDict } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
 
+import Logger from '../logging/Logger';
 import { IIDGenerator } from '../util/id';
 
 export type MessageSender = (msg: WampMessage) => void;
@@ -11,7 +12,7 @@ export type IDGen = {
 };
 
 export interface IMessageProcessorFactory {
-  new (sender: MessageSender, violator: ProtocolViolator, idGen: IDGen): IMessageProcessor;
+  new (sender: MessageSender, violator: ProtocolViolator, idGen: IDGen, logger: Logger): IMessageProcessor;
   GetFeatures(): WampDict;
 }
 export interface IMessageProcessor {
@@ -25,6 +26,7 @@ export abstract class MessageProcessor {
     protected sender: MessageSender,
     protected violator: ProtocolViolator,
     protected idGen: IDGen,
+    protected logger: Logger,
   ) {}
 
   public Close(): void {

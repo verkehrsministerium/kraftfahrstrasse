@@ -2,7 +2,7 @@ import { Deferred } from 'queueable';
 
 import { MessageProcessor } from './MessageProcessor';
 
-import { CallResult } from '../types/Connection';
+import { CallResult, LogLevel } from '../types/Connection';
 import { CallOptions, ECallKillMode, WampCallMessage, WampCancelMessage } from '../types/messages/CallMessage';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
@@ -29,7 +29,7 @@ export class Caller extends MessageProcessor {
     K extends WampDict,
     RA extends WampList,
     RK extends WampDict
-  >(uri: WampURI, args?: A, kwArgs?: K, details?: CallOptions): [Promise<CallResult<RA, RK>>, WampID] {
+    >(uri: WampURI, args?: A, kwArgs?: K, details?: CallOptions): [Promise<CallResult<RA, RK>>, WampID] {
     if (this.closed) {
       return [Promise.reject('caller closed'), -1];
     }
@@ -44,26 +44,28 @@ export class Caller extends MessageProcessor {
       args || [],
       kwArgs || {},
     ];
+    this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Calling ${uri}`);
     const result = new Deferred<CallResult<RA, RK>>();
     this.pendingCalls.set(requestID, [result, !!details.receive_progress]);
     this.sender(msg);
     return [result.promise, requestID];
   }
 
-  public CancelCall(callid: WampID, killMode?: ECallKillMode): void {
+  public CancelCall(callId: WampID, killMode?: ECallKillMode): void {
     // TODO: Check if call canceling supported by router
     if (this.closed) {
       throw new Error('caller closed');
     }
-    const call = this.pendingCalls.get(callid);
+    const call = this.pendingCalls.get(callId);
     if (!call) {
       throw new Error('no such pending call');
     }
     const msg: WampCancelMessage = [
       EWampMessageID.CANCEL,
-      callid,
+      callId,
       { mode: killMode || '' },
     ];
+    this.logger.log(LogLevel.DEBUG, `Cancelling Call ${callId}`);
     this.sender(msg);
   }
 
@@ -77,6 +79,8 @@ export class Caller extends MessageProcessor {
   protected onMessage(msg: WampMessage): boolean {
     if (msg[0] === EWampMessageID.ERROR && msg[1] === EWampMessageID.CALL) {
       const callid = msg[2];
+      this.logger.log(LogLevel.WARNING, `ID: ${callid}, Received Error for Call: ${msg[4]}`);
+
       const call = this.pendingCalls.get(callid);
       if (!call) {
         this.violator('unexpected CALL ERROR');
@@ -97,6 +101,8 @@ export class Caller extends MessageProcessor {
       const resargs = msg[3] || [];
       const reskwargs = msg[4] || {};
       if (details.progress) {
+        this.logger.log(LogLevel.DEBUG, `ID: ${callid}, Received Progress for Call`);
+
         if (!call[1]) {
           this.violator('unexpected PROGRESS RESULT');
           return true;
@@ -109,6 +115,7 @@ export class Caller extends MessageProcessor {
           nextResult: nextResult.promise,
         });
       } else {
+        this.logger.log(LogLevel.DEBUG, `ID: ${callid}, Received Result for Call`);
         this.pendingCalls.delete(callid);
         call[0].resolve({
           args: resargs,

@@ -26,10 +26,11 @@ export type TransportEvent = {
 };
 
 export interface ITransportFactory {
-    new(serializer: ISerializer, options?: WampDict): ITransport;
+  new(serializer: ISerializer, options?: WampDict): ITransport;
 }
 
 export interface ITransport {
+  name: string;
   Open(endpoint: string): AsyncIterableIterator<TransportEvent>;
   Close(code: number, reason: string): void;
   Send(message: WampMessage): void;

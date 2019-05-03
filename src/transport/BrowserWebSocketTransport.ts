@@ -4,6 +4,6 @@ import { WebSocketTransport } from './WebSocketTransport';
 
 export class BrowserWebSocketTransport extends WebSocketTransport {
   constructor(serializer: ISerializer, transportOptions?: WampDict) {
-    super(serializer, WebSocket, transportOptions);
+    super('BrowserWebSocketTransport', serializer, WebSocket, transportOptions);
   }
 }
