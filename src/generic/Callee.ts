@@ -12,7 +12,7 @@ import {
   WampUnregisterMessage,
 } from '../types/messages/RegisterMessage';
 
-import Logger from '../logging/Logger';
+import { Logger } from '../logging/Logger';
 import { CallHandler, CallResult, IRegistration, LogLevel } from '../types/Connection';
 import { WampErrorMessage, WampMessage } from '../types/Protocol';
 import { PendingMap } from '../util/map';

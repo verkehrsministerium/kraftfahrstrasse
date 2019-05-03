@@ -11,7 +11,7 @@ import {
   WampUnsubscribeMessage,
 } from '../types/messages/SubscribeMessage';
 
-import Logger from '../logging/Logger';
+import { Logger } from '../logging/Logger';
 import { EventHandler, ISubscription, LogLevel } from '../types/Connection';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
