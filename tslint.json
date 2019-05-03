@@ -6,6 +6,7 @@
     "interface-over-type-literal": false,
     "max-classes-per-file": [true, 3, "exclude-class-expressions"],
     "object-literal-sort-keys": false,
-    "whitespace": [true, "check-branch", "check-decl", "check-operator", "check-module", "check-separator", "check-type", "check-type-operators", "check-preblock"]
+    "whitespace": [true, "check-branch", "check-decl", "check-operator", "check-module", "check-separator", "check-type", "check-type-operators", "check-preblock"],
+    "callable-types": false
   }
 }
