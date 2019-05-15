@@ -41,6 +41,9 @@ const createIdGens = () => {
 };
 
 export class Connection implements IConnection {
+
+  public sessionId: number | null = null;
+
   private transport: ITransport | null = null;
   private onOpen: Deferred<WelcomeDetails> | null = null;
   private onClose: Deferred<ConnectionCloseInfo> | null = null;
@@ -258,7 +261,11 @@ export class Connection implements IConnection {
         // Harr, Harr, Harr
 
         const estabishedMessage = msg as WampWelcomeMessage;
-        this.onOpen!.resolve(estabishedMessage[2]);
+
+        const [, sessionId, welcomeDetails] = estabishedMessage;
+
+        this.sessionId = sessionId;
+        this.onOpen!.resolve(welcomeDetails);
         this.onOpen = null;
         break;
       }
