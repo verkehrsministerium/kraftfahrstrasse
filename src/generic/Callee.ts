@@ -1,6 +1,7 @@
 import { Deferred } from 'queueable';
 
-import { MessageProcessor } from './MessageProcessor';
+import { Logger } from '../logging/Logger';
+import { CallHandler, CallResult, IRegistration, LogLevel } from '../types/Connection';
 
 import { InvocationDetails, WampYieldMessage } from '../types/messages/CallMessage';
 import { EWampMessageID, WampDict, WampID, WampList } from '../types/messages/MessageTypes';
@@ -11,11 +12,10 @@ import {
   WampUnregisteredMessage,
   WampUnregisterMessage,
 } from '../types/messages/RegisterMessage';
-
-import { Logger } from '../logging/Logger';
-import { CallHandler, CallResult, IRegistration, LogLevel } from '../types/Connection';
-import { WampErrorMessage, WampMessage } from '../types/Protocol';
+import { WampMessage } from '../types/Protocol';
 import { PendingMap } from '../util/map';
+
+import { MessageProcessor } from './MessageProcessor';
 import { WampError } from './WampError';
 
 class Registration implements IRegistration {
@@ -114,7 +114,9 @@ class Call {
     } else if (err instanceof WampError) {
       wampError = err as WampError;
     } else {
-      wampError = new WampError<any>('wamp.error.runtime_error', err);
+      this.logger.log(LogLevel.WARNING, `A runtime error occurred`);
+      this.logger.log(LogLevel.WARNING, err);
+      wampError = new WampError<any>('wamp.error.runtime_error', [err]);
     }
 
     const errorMessage = wampError.toErrorMessage(this.callid);
