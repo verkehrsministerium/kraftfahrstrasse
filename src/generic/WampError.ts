@@ -13,8 +13,8 @@ class WampError<TArgs extends WampList = WampList, TKwArgs extends WampDict = Wa
       callId,
       {},
       this.errorUri,
-      this.args,
-      this.kwArgs,
+      this.args || [],
+      this.kwArgs || {},
     ];
   }
 
