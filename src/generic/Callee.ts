@@ -16,6 +16,7 @@ import { Logger } from '../logging/Logger';
 import { CallHandler, CallResult, IRegistration, LogLevel } from '../types/Connection';
 import { WampErrorMessage, WampMessage } from '../types/Protocol';
 import { PendingMap } from '../util/map';
+import { WampError } from './WampError';
 
 class Registration implements IRegistration {
   public onUnregistered = new Deferred<void>();
@@ -105,20 +106,24 @@ class Call {
   }
 
   private onHandlerError(err: any): void {
-    const errmsg: WampErrorMessage = [
-      EWampMessageID.ERROR,
-      EWampMessageID.INVOCATION,
-      this.callid,
-      {},
-      'wamp.error.runtime_error',
-      [err],
-      {},
-    ];
+
+    let wampError: WampError | null = null;
+
+    if (typeof err === 'string' || err instanceof String) {
+      wampError = new WampError(err as string);
+    } else if (err instanceof WampError) {
+      wampError = err as WampError;
+    } else {
+      wampError = new WampError<any>('wamp.error.runtime_error', err);
+    }
+
+    const errorMessage = wampError.toErrorMessage(this.callid);
+
     if (!this.cancelled) {
       this.onCancel.reject();
     }
-    this.logger.log(LogLevel.DEBUG, `ID: ${this.callid}, Sending Error`);
-    this.sender(this.callid, errmsg, true);
+    this.logger.log(LogLevel.DEBUG, `ID: ${this.callid}, Sending Error ${wampError.errorUri}`);
+    this.sender(this.callid, errorMessage, true);
   }
 }
 

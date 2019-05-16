@@ -36,3 +36,4 @@ export { AnonymousAuthProvider } from './auth/Anonymous';
 
 // Export the main connection object
 export { Connection } from './generic/Connection';
+export { WampError } from './generic/WampError';

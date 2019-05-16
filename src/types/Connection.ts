@@ -2,7 +2,7 @@ import { IAuthProvider } from './AuthProvider';
 import { ISerializer } from './Serializer';
 import { ITransportFactory } from './Transport';
 
-import { WampDict, WampID, WampList } from './messages/MessageTypes';
+import { WampDict, WampID, WampList, WampURI } from './messages/MessageTypes';
 
 import { CallOptions, ECallKillMode, InvocationDetails } from './messages/CallMessage';
 import { PublishOptions } from './messages/PublishMessage';
