@@ -23,14 +23,15 @@ export enum EWampMessageID {
   INVOCATION = 68,
   INTERRUPT = 69,
   YIELD = 70,
-};
+}
 
 export type WampID = number;
 export type WampURI = string;
 export type WampDict = {
   [key: string]: any;
-}
-export type WampList = Array<any>;
+};
+
+export type WampList = any[];
 
 export enum EMatchPolicy {
   Wildcard = 'wildcard',
