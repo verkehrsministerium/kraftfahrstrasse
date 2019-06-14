@@ -26,7 +26,6 @@ export abstract class WebSocketTransport implements ITransport {
       const channel = new Channel<TransportEvent>();
       channel.push({
         type: ETransportEventType.ERROR,
-
         error: 'Transport already opened!',
       });
       return channel;
@@ -41,32 +40,37 @@ export abstract class WebSocketTransport implements ITransport {
         type: ETransportEventType.OPEN,
       });
     };
-    this.webSocket.onmessage = ev => {
 
+    this.webSocket.onmessage = ev => {
       try {
         const msg = (this.serializer.Deserialize as any)(ev.data);
-        // console.log("<=== RECEIVE MESSAGE:", msg);
         this.channel.push({
           type: ETransportEventType.MESSAGE,
-          // FIXME: Report to TSC
           message: msg,
         });
       } catch (err) {
         this.channel.push({
           type: ETransportEventType.ERROR,
-
           error: err,
         });
       }
     };
     this.webSocket.onclose = ev => {
       this.webSocket!.onclose = null;
+      this.webSocket!.onerror = null;
       this.channel.push({
         type: ETransportEventType.CLOSE,
-
         code: ev.code,
         reason: ev.reason,
         wasClean: ev.wasClean,
+      });
+    };
+    this.webSocket.onerror = err => {
+      this.webSocket!.onclose = null;
+      this.webSocket!.onerror = null;
+      this.channel.push({
+        type: ETransportEventType.ERROR,
+        error: `Transport error: ${err}`,
       });
     };
     return this.channel;

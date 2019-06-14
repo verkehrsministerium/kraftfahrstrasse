@@ -174,6 +174,13 @@ export class Connection implements IConnection {
           }
           break;
         }
+        case ETransportEventType.ERROR: {
+          if (this.state.getState() !== EConnectionState.ESTABLISHED && !!this.onOpen) {
+            this.onOpen.reject(event.error);
+            this.onOpen = null;
+          }
+          break;
+        }
         case ETransportEventType.CLOSE: {
           this.transport = null;
           const state = this.state.getState();
@@ -200,7 +207,7 @@ export class Connection implements IConnection {
           break;
         }
       }
-      if (event.type === ETransportEventType.CLOSE) {
+      if (event.type === ETransportEventType.CLOSE || event.type === ETransportEventType.ERROR) {
         break; // exit loop.
       }
     }
