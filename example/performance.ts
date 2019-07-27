@@ -10,7 +10,7 @@ const ROUTER_ADDRESS = process.env.ROUTER_ADDRESS || process.exit(1);
 async function main() {
   const connection = new Connection({
     endpoint: ROUTER_ADDRESS,
-    realm: 'realm1',
+    realm: 'default',
 
     serializer: new JSONSerializer(),
     transport: NodeWebSocketTransport,
@@ -22,6 +22,7 @@ async function main() {
       }
     },
   });
+  console.log("opening");
 
   try {
     await connection.Open();
@@ -29,7 +30,9 @@ async function main() {
     console.log(err);
     process.exit(1);
   }
-  connection.Subscribe(
+
+  console.log("subscribing");
+  await connection.Subscribe(
     'scenario.high_load',
     () => {},
   );
@@ -41,9 +44,11 @@ async function main() {
     msgs = 0;
   }, 1000);
 
+  console.log("publishing");
   while (true) {
     try {
       await connection.Publish('scenario.high_load');
+      console.log("published");
       msgs += 1;
     } catch (err) {}
   }

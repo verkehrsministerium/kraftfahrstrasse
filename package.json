@@ -13,7 +13,7 @@
     "build": "npm run lint && npm run build:ts",
     "build:ts": "tsc -p tsconfig.module.json && tsc -p tsconfig.cjs.json",
     "build:docs": "typedoc --out docs --readme README.md --target esnext --theme default --mode file src --ignoreCompilerErrors",
-    "lint": "tslint -c tslint.json src/**/*.ts",
+    "lint": "tslint --project tsconfig.json -c tslint.json src/**/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "example": "ts-node -r tsconfig-paths/register -P tsconfig.example.json example/$*",
     "semantic-release": "semantic-release"
@@ -56,6 +56,7 @@
     "tsconfig-paths": "^3.8.0",
     "tslint": "^5.18.0",
     "typedoc": "^0.15.0-0",
-    "typescript": "^3.5.3"
+    "typescript": "^3.5.3",
+    "websocket-stream": "^5.5.0"
   }
 }

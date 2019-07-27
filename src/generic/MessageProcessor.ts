@@ -4,7 +4,7 @@ import { WampMessage } from '../types/Protocol';
 import { Logger } from '../logging/Logger';
 import { IIDGenerator } from '../util/id';
 
-export type MessageSender = (msg: WampMessage) => void;
+export type MessageSender = (msg: WampMessage) => Promise<void>;
 export type ProtocolViolator = (msg: string) => void;
 export type IDGen = {
   global: IIDGenerator;
@@ -17,7 +17,7 @@ export interface IMessageProcessorFactory {
 }
 export interface IMessageProcessor {
   Close(): void;
-  ProcessMessage(msg: WampMessage): boolean;
+  ProcessMessage(msg: WampMessage): Promise<boolean>;
 }
 
 export abstract class MessageProcessor {
@@ -34,13 +34,13 @@ export abstract class MessageProcessor {
     this.onClose();
   }
 
-  public ProcessMessage(msg: WampMessage): boolean {
+  public ProcessMessage(msg: WampMessage): Promise<boolean> {
     if (this.closed) {
-      return false;
+      return Promise.resolve(false);
     }
     return this.onMessage(msg);
   }
 
   protected abstract onClose(): void;
-  protected abstract onMessage(msg: WampMessage): boolean;
+  protected async abstract onMessage(msg: WampMessage): Promise<boolean>;
 }

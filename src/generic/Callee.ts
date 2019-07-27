@@ -57,7 +57,7 @@ class Call {
     handler: CallHandler<WampList, WampDict, WampList, WampDict>,
     args: WampList, kwArgs: WampDict, details: InvocationDetails,
     public callid: WampID,
-    private sender: (cid: number, msg: WampMessage, finish: boolean) => void,
+    private sender: (cid: number, msg: WampMessage, finish: boolean) => Promise<void>,
     private logger: Logger,
   ) {
     args = args || [];
@@ -85,7 +85,7 @@ class Call {
     this.onCancel.resolve();
   }
 
-  private onHandlerResult(res: CallResult<WampList, WampDict>): void {
+  private async onHandlerResult(res: CallResult<WampList, WampDict>): Promise<void> {
     if (!!res.nextResult) {
       res.nextResult.then(r => this.onHandlerResult(r), err => this.onHandlerError(err));
     }
@@ -100,12 +100,12 @@ class Call {
       if (!res.nextResult && !this.cancelled) {
         this.onCancel.reject();
       }
-      this.sender(this.callid, yieldmsg, !res.nextResult);
+      await this.sender(this.callid, yieldmsg, !res.nextResult);
       this.logger.log(LogLevel.DEBUG, `ID: ${this.callid}, Sending Yield`);
     }
   }
 
-  private onHandlerError(err: any): void {
+  private async onHandlerError(err: any): Promise<void> {
 
     let wampError: WampError | null = null;
 
@@ -125,7 +125,7 @@ class Call {
       this.onCancel.reject();
     }
     this.logger.log(LogLevel.DEBUG, `ID: ${this.callid}, Sending Error ${wampError.errorUri}`);
-    this.sender(this.callid, errorMessage, true);
+    await this.sender(this.callid, errorMessage, true);
   }
 }
 
@@ -183,7 +183,7 @@ export class Callee extends MessageProcessor {
       uri,
     ];
     this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Registering ${uri}`);
-    this.sender(msg);
+    await this.sender(msg);
     const registered = await this.regs.PutAndResolve(requestID);
     const regID = registered[2];
     const registration = new Registration(regID, handler as any, id => this.unregister(id));
@@ -204,18 +204,18 @@ export class Callee extends MessageProcessor {
     this.currentRegistrations.clear();
   }
 
-  protected onMessage(msg: WampMessage): boolean {
+  protected async onMessage(msg: WampMessage): Promise<boolean> {
     let [handled, success, error] = this.regs.Handle(msg);
     if (handled) {
       if (!success) {
-        this.violator(error);
+        await this.violator(error);
       }
       return true;
     }
     [handled, success, error] = this.unregs.Handle(msg);
     if (handled) {
       if (!success) {
-        this.violator(error);
+        await this.violator(error);
       }
       return true;
     }
@@ -223,7 +223,7 @@ export class Callee extends MessageProcessor {
       const [, requestID, regID, details, args, kwargs] = msg;
       const reg = this.currentRegistrations.get(regID);
       if (!reg) {
-        this.violator('unexpected INVOCATION');
+        await this.violator('unexpected INVOCATION');
         return true;
       }
       const call = new Call(
@@ -232,12 +232,12 @@ export class Callee extends MessageProcessor {
         kwargs || {}, // KwArgs or empty object
         details || {}, // Options or empty object
         requestID,
-        (cid, msgToSend, finished) => {
+        async (cid, msgToSend, finished) => {
           if (finished) {
             this.runningCalls.delete(cid);
           }
           if (!this.closed) {
-            this.sender(msgToSend);
+            await this.sender(msgToSend);
           }
         },
         this.logger,
@@ -251,7 +251,7 @@ export class Callee extends MessageProcessor {
       const requestID = msg[1];
       const call = this.runningCalls.get(requestID);
       if (!call) {
-        this.violator('unexpected INTERRUPT');
+        await this.violator('unexpected INTERRUPT');
       } else {
         this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Received Cancellation Request`);
         call.cancel();
@@ -261,7 +261,7 @@ export class Callee extends MessageProcessor {
     return false;
   }
 
-  private unregister(reg: Registration): void {
+  private async unregister(reg: Registration): Promise<void> {
     if (this.closed) {
       throw new Error('callee closed');
     }
@@ -277,6 +277,6 @@ export class Callee extends MessageProcessor {
     }, err => {
       reg.onUnregistered.reject(err);
     });
-    this.sender(msg);
+    await this.sender(msg);
   }
 }

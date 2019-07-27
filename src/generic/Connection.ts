@@ -94,11 +94,11 @@ export class Connection implements IConnection {
     return this.onClose.promise;
   }
 
-  public Close(): Promise<ConnectionCloseInfo> {
+  public async Close(): Promise<ConnectionCloseInfo> {
     if (!this.transport) {
       return Promise.reject('transport is not open');
     }
-    this.transport.Send([
+    await this.transport.Send([
       EWampMessageID.GOODBYE,
       { message: 'client shutdown' },
       'wamp.close.normal',
@@ -109,23 +109,23 @@ export class Connection implements IConnection {
     return this.OnClose();
   }
 
-  public CancelCall(callid: WampID, mode?: ECallKillMode): void {
+  public async CancelCall(callid: WampID, mode?: ECallKillMode): Promise<void> {
     if (!this.subHandlers) {
       throw new Error('invalid session state');
     }
-    this.subHandlers[2].CancelCall(callid, mode);
+    await this.subHandlers[2].CancelCall(callid, mode);
   }
 
-  public Call<
+  public async Call<
     A extends WampList,
     K extends WampDict,
     RA extends WampList,
     RK extends WampDict
-    >(uri: WampURI, args?: A, kwargs?: K, opts?: CallOptions): [Promise<CallResult<RA, RK>>, WampID] {
+    >(uri: WampURI, args?: A, kwargs?: K, opts?: CallOptions): Promise<[Promise<CallResult<RA, RK>>, WampID]> {
     if (!this.subHandlers) {
       return [Promise.reject('invalid session state'), -1];
     }
-    return this.subHandlers[2].Call(uri, args, kwargs, opts);
+    return await this.subHandlers[2].Call(uri, args, kwargs, opts);
   }
 
   public Register<
@@ -161,9 +161,11 @@ export class Connection implements IConnection {
   private async runConnection(): Promise<void> {
     const endpoint = this.connectionOptions.endpoint;
     for await (const event of this.transport!.Open(endpoint)) {
+      console.log(event);
       switch (event.type) {
         case ETransportEventType.OPEN: {
-          this.sendHello();
+          await this.sendHello();
+          console.log("senttttttt");
           break;
         }
         case ETransportEventType.MESSAGE: {
@@ -186,7 +188,9 @@ export class Connection implements IConnection {
           const state = this.state.getState();
           this.state = new ConnectionStateMachine();
           if (!!this.subHandlers) {
-            this.subHandlers.forEach(h => h.Close());
+            for (const handler of this.subHandlers) {
+              await handler.Close();
+            }
             this.subHandlers = null;
           }
           if (state !== EConnectionState.ESTABLISHED && !!this.onOpen) {
@@ -210,10 +214,14 @@ export class Connection implements IConnection {
       if (event.type === ETransportEventType.CLOSE || event.type === ETransportEventType.ERROR) {
         break; // exit loop.
       }
+      console.log("on to the next one!");
+      process.nextTick(() => {
+        console.log((this.transport! as any).webSocket!.read());
+      });
     }
   }
 
-  private sendHello(): void {
+  private async sendHello(): Promise<void> {
     const details: HelloMessageDetails = {
       roles: Object.assign({}, ...this.subFactories.map(j => j.GetFeatures())),
       agent: 'kraftfahrstrasse pre-alpha',
@@ -229,7 +237,7 @@ export class Connection implements IConnection {
       this.connectionOptions.realm,
       details,
     ];
-    this.transport!.Send(msg);
+    await this.transport!.Send(msg);
     this.state.update([EMessageDirection.SENT, EWampMessageID.HELLO]);
   }
 
@@ -242,7 +250,7 @@ export class Connection implements IConnection {
       case EConnectionState.CHALLENGING: {
         const challengeMsg = msg as WampChallengeMessage;
         const signature = await this.connectionOptions.authProvider.ComputeChallenge(challengeMsg[2] || {});
-        this.transport.Send([
+        await this.transport.Send([
           EWampMessageID.AUTHENTICATE,
           signature.signature,
           signature.details || {},
@@ -254,11 +262,11 @@ export class Connection implements IConnection {
         this.idGen = createIdGens();
         this.subHandlers = this.subFactories.map(handlerClass => {
           return new handlerClass(
-            msgToSend => {
-              this.transport!.Send(msgToSend);
+            async msgToSend => {
+              await this.transport!.Send(msgToSend);
             },
-            reason => {
-              this.handleProtocolViolation(reason);
+            async reason => {
+              await this.handleProtocolViolation(reason);
             },
             this.idGen,
             this.logger,
@@ -278,25 +286,25 @@ export class Connection implements IConnection {
       }
       case EConnectionState.CLOSING: {
         // We received a GOODBYE message from the server, so reply with goodbye and shutdown the transport.
-        this.transport.Send([
+        await this.transport.Send([
           EWampMessageID.GOODBYE,
           { message: 'clean close' },
           'wamp.close.goodbye_and_out',
         ]);
         this.state.update([EMessageDirection.SENT, EWampMessageID.GOODBYE]);
-        this.transport.Close(1000, 'wamp.close.normal');
+        await this.transport.Close(1000, 'wamp.close.normal');
         break;
       }
       case EConnectionState.CLOSED: {
         // Clean close finished, actually close the transport, so onClose and close Callbacks will be created
-        this.transport.Close(1000, 'wamp.close.normal');
+        await this.transport.Close(1000, 'wamp.close.normal');
         break;
       }
       case EConnectionState.ERROR: {
         // protocol violation, so close the transport not clean (i.e. code 3000)
         // and if we encountered the error, send an ABORT message to the server
         if (msg[0] !== EWampMessageID.ABORT) {
-          this.handleProtocolViolation('protocol violation during session establish');
+          await this.handleProtocolViolation('protocol violation during session establish');
         } else {
           this.transport.Close(3000, msg[2]);
           if (!!this.onOpen) {
@@ -316,18 +324,18 @@ export class Connection implements IConnection {
     }
     let success = false;
     for (const subHandler of this.subHandlers!) {
-      success = subHandler.ProcessMessage(msg);
+      success = await subHandler.ProcessMessage(msg);
       if (success) {
         break;
       }
     }
     if (!success) {
       this.logger.log(LogLevel.ERROR, `Unhandled message: ${JSON.stringify(msg)}`);
-      this.handleProtocolViolation('no handler found for message');
+      await this.handleProtocolViolation('no handler found for message');
     }
   }
 
-  private handleProtocolViolation(reason: WampURI): void {
+  private async handleProtocolViolation(reason: WampURI): Promise<void> {
     if (!this.transport) {
       this.logger.log(LogLevel.ERROR, 'Failed to handle protocol violation: Already closed.');
       return;
@@ -339,7 +347,7 @@ export class Connection implements IConnection {
     ];
 
     this.logger.log(LogLevel.ERROR, `Protocol violation: ${reason }`);
-    this.transport.Send(abortMessage);
+    await this.transport.Send(abortMessage);
     this.transport.Close(3000, 'protcol_violation');
     if (!!this.onOpen) {
       this.onOpen.reject(new ConnectionOpenError('protcol violation'));

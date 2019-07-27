@@ -155,7 +155,7 @@ export class Subscriber extends MessageProcessor {
       options || {},
       topic,
     ];
-    this.sender(msg);
+    await this.sender(msg);
     return this.subs.PutAndResolve(requestID).then(subscribed => {
       const subId = subscribed[2];
       this.logger.log(LogLevel.DEBUG, `ID: ${subId}, Subscribing ${topic}`);
@@ -178,11 +178,11 @@ export class Subscriber extends MessageProcessor {
     this.currentSubscriptions.clear();
   }
 
-  protected onMessage(msg: WampMessage): boolean {
+  protected async onMessage(msg: WampMessage): Promise<boolean> {
     let [handled, success, error] = this.subs.Handle(msg);
     if (handled) {
       if (!success) {
-        this.violator(error);
+        await this.violator(error);
       }
       return true;
     }
@@ -191,7 +191,7 @@ export class Subscriber extends MessageProcessor {
       const subId = msg[1];
       const subscription = this.currentSubscriptions.get(subId);
       if (!subscription) {
-        this.violator('unexpected EVENT');
+        await this.violator('unexpected EVENT');
         return true;
       }
 
@@ -205,12 +205,12 @@ export class Subscriber extends MessageProcessor {
 
     [handled, success, error] = this.unsubs.Handle(msg);
     if (handled && !success) {
-      this.violator(error);
+      await this.violator(error);
     }
     return handled;
   }
 
-  private sendUnsubscribe(sub: MultiSubscription): void {
+  private async sendUnsubscribe(sub: MultiSubscription): Promise<void> {
     const requestID = this.idGen.session.ID();
     const msg: WampUnsubscribeMessage = [
       EWampMessageID.UNSUBSCRIBE,
@@ -223,6 +223,6 @@ export class Subscriber extends MessageProcessor {
     }, (err: any) => {
       sub.onUnsubscribed.reject(err);
     });
-    this.sender(msg);
+    await this.sender(msg);
   }
 }

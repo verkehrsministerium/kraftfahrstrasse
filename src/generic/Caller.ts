@@ -24,12 +24,12 @@ export class Caller extends MessageProcessor {
 
   private pendingCalls = new Map<WampID, [Deferred<CallResult<WampList, WampDict>>, boolean]>();
 
-  public Call<
+  public async Call<
     A extends WampList,
     K extends WampDict,
     RA extends WampList,
     RK extends WampDict
-    >(uri: WampURI, args?: A, kwArgs?: K, details?: CallOptions): [Promise<CallResult<RA, RK>>, WampID] {
+    >(uri: WampURI, args?: A, kwArgs?: K, details?: CallOptions): Promise<[Promise<CallResult<RA, RK>>, WampID]> {
     if (this.closed) {
       return [Promise.reject('caller closed'), -1];
     }
@@ -47,11 +47,11 @@ export class Caller extends MessageProcessor {
     this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Calling ${uri}`);
     const result = new Deferred<CallResult<RA, RK>>();
     this.pendingCalls.set(requestID, [result, !!details.receive_progress]);
-    this.sender(msg);
+    await this.sender(msg);
     return [result.promise, requestID];
   }
 
-  public CancelCall(callId: WampID, killMode?: ECallKillMode): void {
+  public async CancelCall(callId: WampID, killMode?: ECallKillMode): Promise<void> {
     // TODO: Check if call canceling supported by router
     if (this.closed) {
       throw new Error('caller closed');
@@ -66,7 +66,7 @@ export class Caller extends MessageProcessor {
       { mode: killMode || '' },
     ];
     this.logger.log(LogLevel.DEBUG, `Cancelling Call ${callId}`);
-    this.sender(msg);
+    await this.sender(msg);
   }
 
   protected onClose(): void {
@@ -76,14 +76,14 @@ export class Caller extends MessageProcessor {
     this.pendingCalls.clear();
   }
 
-  protected onMessage(msg: WampMessage): boolean {
+  protected async onMessage(msg: WampMessage): Promise<boolean> {
     if (msg[0] === EWampMessageID.ERROR && msg[1] === EWampMessageID.CALL) {
       const callid = msg[2];
       this.logger.log(LogLevel.WARNING, `ID: ${callid}, Received Error for Call: ${msg[4]}`);
 
       const call = this.pendingCalls.get(callid);
       if (!call) {
-        this.violator('unexpected CALL ERROR');
+        await this.violator('unexpected CALL ERROR');
         return true;
       }
       this.pendingCalls.delete(callid);
@@ -94,7 +94,7 @@ export class Caller extends MessageProcessor {
       const callid = msg[1];
       const call = this.pendingCalls.get(callid);
       if (!call) {
-        this.violator('unexpected RESULT');
+        await this.violator('unexpected RESULT');
         return true;
       }
       const details = msg[2] || {};
@@ -104,7 +104,7 @@ export class Caller extends MessageProcessor {
         this.logger.log(LogLevel.DEBUG, `ID: ${callid}, Received Progress for Call`);
 
         if (!call[1]) {
-          this.violator('unexpected PROGRESS RESULT');
+          await this.violator('unexpected PROGRESS RESULT');
           return true;
         }
         const nextResult = new Deferred<CallResult<WampList, WampDict>>();

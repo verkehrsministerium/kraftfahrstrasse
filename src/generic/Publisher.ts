@@ -72,7 +72,7 @@ export class Publisher extends MessageProcessor {
       args || [],
       kwArgs || {},
     ];
-    this.sender(msg);
+    await this.sender(msg);
     this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Publishing ${topic}`);
 
     const publication = new Publication(requestID, !!options.acknowledge);
@@ -90,10 +90,10 @@ export class Publisher extends MessageProcessor {
     this.publications.Close();
   }
 
-  protected onMessage(msg: WampMessage): boolean {
+  protected async onMessage(msg: WampMessage): Promise<boolean> {
     const [handled, success, error] = this.publications.Handle(msg);
     if (handled && !success) {
-      this.violator(error);
+      await this.violator(error);
     }
     return handled;
   }

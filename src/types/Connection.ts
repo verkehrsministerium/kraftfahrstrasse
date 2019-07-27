@@ -100,7 +100,7 @@ export interface IConnection {
     K extends WampDict,
     RA extends WampList,
     RK extends WampDict
-  >(uri: string, args?: A, kwArgs?: K, options?: CallOptions): [Promise<CallResult<RA, RK>>, WampID];
+  >(uri: string, args?: A, kwArgs?: K, options?: CallOptions): Promise<[Promise<CallResult<RA, RK>>, WampID]>;
 
   Register<
     A extends WampList,
