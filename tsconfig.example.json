@@ -5,7 +5,7 @@
     "module": "commonjs",
     "baseUrl": ".",
     "paths": {
-      "@verkehrsministerium/kraftfahrstrasse": ["src/index"],
+      "@verkehrsministerium/kraftfahrstrasse": ["src/index"]
     }
   }
 }
