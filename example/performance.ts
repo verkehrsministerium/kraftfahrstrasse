@@ -10,7 +10,7 @@ const ROUTER_ADDRESS = process.env.ROUTER_ADDRESS || process.exit(1);
 async function main() {
   const connection = new Connection({
     endpoint: ROUTER_ADDRESS,
-    realm: 'default',
+    realm: 'realm1',
 
     serializer: new JSONSerializer(),
     transport: NodeWebSocketTransport,
@@ -48,7 +48,6 @@ async function main() {
   while (true) {
     try {
       await connection.Publish('scenario.high_load');
-      console.log("published");
       msgs += 1;
     } catch (err) {}
   }

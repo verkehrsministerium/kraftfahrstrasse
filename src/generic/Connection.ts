@@ -161,11 +161,9 @@ export class Connection implements IConnection {
   private async runConnection(): Promise<void> {
     const endpoint = this.connectionOptions.endpoint;
     for await (const event of this.transport!.Open(endpoint)) {
-      console.log(event);
       switch (event.type) {
         case ETransportEventType.OPEN: {
           await this.sendHello();
-          console.log("senttttttt");
           break;
         }
         case ETransportEventType.MESSAGE: {
@@ -214,10 +212,6 @@ export class Connection implements IConnection {
       if (event.type === ETransportEventType.CLOSE || event.type === ETransportEventType.ERROR) {
         break; // exit loop.
       }
-      console.log("on to the next one!");
-      process.nextTick(() => {
-        console.log((this.transport! as any).webSocket!.read());
-      });
     }
   }
 

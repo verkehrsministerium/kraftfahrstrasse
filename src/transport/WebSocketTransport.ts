@@ -5,17 +5,12 @@ import { WampMessage } from '../types/Protocol';
 import { IsBinarySerializer, ISerializer } from '../types/Serializer';
 import { ETransportEventType, ITransport, TransportEvent } from '../types/Transport';
 
-import * as WebSocketStream from 'websocket-stream';
-import { WebSocketDuplex } from 'websocket-stream';
-
-import { Writable } from 'stream';
-
 export interface IWebSocketFactory {
   new(endpoint: string, protocol?: string | string[], transportOptions?: WampDict): WebSocket;
 }
 
 export abstract class WebSocketTransport implements ITransport {
-  protected webSocket: WebSocketDuplex | null = null;
+  protected webSocket: WebSocket | null = null;
   private channel = new Channel<TransportEvent>();
 
   constructor(
@@ -36,41 +31,33 @@ export abstract class WebSocketTransport implements ITransport {
       return channel;
     }
 
-    this.webSocket = WebSocketStream(endpoint, this.serializer.ProtocolID(), this.transportOptions);
+    this.webSocket = new this.webSocketFactory(endpoint, this.serializer.ProtocolID(), this.transportOptions);
     if (IsBinarySerializer(this.serializer)) {
-      this.webSocket.socket.binaryType = 'arraybuffer';
+      this.webSocket.binaryType = 'arraybuffer';
     }
-    this.webSocket!.socket.onopen = () => {
+    this.webSocket.onopen = () => {
       this.channel.push({
         type: ETransportEventType.OPEN,
       });
     };
 
-    const that = this;
-
-    class DeserializeStream extends Writable {
-      public _write(chunk: string | Buffer | Uint8Array | any, enc: string, next: () => void): void {
-        console.log(chunk.toString());
-        try {
-          const msg = (that.serializer.Deserialize as any)(chunk.toString());
-          that.channel.push({
-            type: ETransportEventType.MESSAGE,
-            message: msg,
-          });
-        } catch (err) {
-          that.channel.push({
-            type: ETransportEventType.ERROR,
-            error: err,
-          });
-        }
-        next();
+    this.webSocket.onmessage = ev => {
+      try {
+        const msg = (this.serializer.Deserialize as any)(ev.data);
+        this.channel.push({
+          type: ETransportEventType.MESSAGE,
+          message: msg,
+        });
+      } catch (err) {
+        this.channel.push({
+          type: ETransportEventType.ERROR,
+          error: err,
+        });
       }
-    }
-    //this.webSocket.pipe(new DeserializeStream());
-
-    this.webSocket!.socket.onclose = ev => {
-      this.webSocket!.socket.onclose = null as any;
-      this.webSocket!.socket.onerror = null as any;
+    };
+    this.webSocket.onclose = ev => {
+      this.webSocket!.onclose = null;
+      this.webSocket!.onerror = null;
       this.channel.push({
         type: ETransportEventType.CLOSE,
         code: ev.code,
@@ -78,9 +65,9 @@ export abstract class WebSocketTransport implements ITransport {
         wasClean: ev.wasClean,
       });
     };
-    this.webSocket!.socket.onerror = err => {
-      this.webSocket!.socket.onclose = null as any;
-      this.webSocket!.socket.onerror = null as any;
+    this.webSocket.onerror = err => {
+      this.webSocket!.onclose = null;
+      this.webSocket!.onerror = null;
       this.channel.push({
         type: ETransportEventType.ERROR,
         error: `Transport error: ${err}`,
@@ -93,8 +80,8 @@ export abstract class WebSocketTransport implements ITransport {
     if (!this.webSocket) {
       return;
     }
-    this.webSocket.socket.onclose = null as any;
-    this.webSocket.socket.close(code, reason);
+    this.webSocket.onclose = null;
+    this.webSocket.close(code, reason);
     this.channel.push({
       type: ETransportEventType.CLOSE,
 
@@ -106,17 +93,10 @@ export abstract class WebSocketTransport implements ITransport {
 
   public async Send(msg: WampMessage): Promise<void> {
     // console.log("===> SENDING MESSAGE:", msg);
-
-    //this.webSocket!.cork();
-    //process.nextTick(() => this.webSocket!.uncork());
-
     const payload = this.serializer.Serialize(msg);
+    const socket = this.webSocket;
     await new Promise(resolve => {
-      console.log("wriiiiiiiiiting");
-      // FIXME: Using this.webSocket!.write here causes a deadlock during Open()
-      //        The data is buffered here and Open() waits for a Welcome message to resolve
-      this.webSocket!.socket.send(payload, resolve);
+      (socket as any).send(payload, resolve);
     });
-    console.log("doooooooone");
   }
 }
