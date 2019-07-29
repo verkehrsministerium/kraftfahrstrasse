@@ -4,7 +4,7 @@ import { WampMessage } from '../types/Protocol';
 import { Logger } from '../logging/Logger';
 import { IIDGenerator } from '../util/id';
 
-export type MessageSender = (msg: WampMessage) => void;
+export type MessageSender = (msg: WampMessage) => Promise<void>;
 export type ProtocolViolator = (msg: string) => void;
 export type IDGen = {
   global: IIDGenerator;

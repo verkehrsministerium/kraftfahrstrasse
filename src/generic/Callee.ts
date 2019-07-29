@@ -15,7 +15,7 @@ import {
 import { WampMessage } from '../types/Protocol';
 import { PendingMap } from '../util/map';
 
-import { MessageProcessor } from './MessageProcessor';
+import { MessageProcessor, ProtocolViolator } from './MessageProcessor';
 import { WampError } from './WampError';
 
 class Registration implements IRegistration {
@@ -23,17 +23,17 @@ class Registration implements IRegistration {
   constructor(
     private id: WampID,
     public handler: CallHandler<WampList, WampDict, WampList, WampDict>,
-    private unregister: (reg: Registration) => void,
+    private unregister: (reg: Registration) => Promise<void>,
   ) {
     this.onUnregistered.promise.catch(e => this.reinitCatch(e));
   }
 
-  public Unregister(): Promise<void> {
-    this.unregister(this);
+  public async Unregister(): Promise<void> {
+    await this.unregister(this);
     return this.OnUnregistered();
   }
 
-  public async OnUnregistered(): Promise<void> {
+  public OnUnregistered(): Promise<void> {
     return this.onUnregistered.promise;
   }
 
@@ -58,6 +58,7 @@ class Call {
     args: WampList, kwArgs: WampDict, details: InvocationDetails,
     public callid: WampID,
     private sender: (cid: number, msg: WampMessage, finish: boolean) => void,
+    private violator: ProtocolViolator,
     private logger: Logger,
   ) {
     args = args || [];
@@ -73,7 +74,9 @@ class Call {
     this.progress = details && !!details.receive_progress;
 
     setTimeout(() => {
-      handler(args, kwArgs, details).then(res => this.onHandlerResult(res), err => this.onHandlerError(err));
+      handler(args, kwArgs, details)
+        .then(res => this.onHandlerResult(res), err => this.onHandlerError(err))
+        .catch(e => this.violator(`Failed to send: ${e}`));
     }, 0);
   }
 
@@ -85,10 +88,7 @@ class Call {
     this.onCancel.resolve();
   }
 
-  private onHandlerResult(res: CallResult<WampList, WampDict>): void {
-    if (!!res.nextResult) {
-      res.nextResult.then(r => this.onHandlerResult(r), err => this.onHandlerError(err));
-    }
+  private async onHandlerResult(res: CallResult<WampList, WampDict>): Promise<void> {
     if (!res.nextResult || this.progress) {
       const yieldmsg: WampYieldMessage = [
         EWampMessageID.YIELD,
@@ -100,12 +100,17 @@ class Call {
       if (!res.nextResult && !this.cancelled) {
         this.onCancel.reject();
       }
-      this.sender(this.callid, yieldmsg, !res.nextResult);
+      await this.sender(this.callid, yieldmsg, !res.nextResult);
       this.logger.log(LogLevel.DEBUG, `ID: ${this.callid}, Sending Yield`);
+    }
+    if (res.nextResult) {
+      res.nextResult
+        .then(r => this.onHandlerResult(r), err => this.onHandlerError(err))
+        .catch(e => this.violator(`Failed to send: ${e}`));
     }
   }
 
-  private onHandlerError(err: any): void {
+  private async onHandlerError(err: any): Promise<void> {
 
     let wampError: WampError | null = null;
 
@@ -125,7 +130,7 @@ class Call {
       this.onCancel.reject();
     }
     this.logger.log(LogLevel.DEBUG, `ID: ${this.callid}, Sending Error ${wampError.errorUri}`);
-    this.sender(this.callid, errorMessage, true);
+    await this.sender(this.callid, errorMessage, true);
   }
 }
 
@@ -183,10 +188,10 @@ export class Callee extends MessageProcessor {
       uri,
     ];
     this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Registering ${uri}`);
-    this.sender(msg);
+    await this.sender(msg);
     const registered = await this.regs.PutAndResolve(requestID);
     const regID = registered[2];
-    const registration = new Registration(regID, handler as any, id => this.unregister(id));
+    const registration = new Registration(regID, handler as any, async id => await this.unregister(id));
     this.currentRegistrations.set(regID, registration);
     return registration;
   }
@@ -232,14 +237,15 @@ export class Callee extends MessageProcessor {
         kwargs || {}, // KwArgs or empty object
         details || {}, // Options or empty object
         requestID,
-        (cid, msgToSend, finished) => {
+        async (cid, msgToSend, finished) => {
           if (finished) {
             this.runningCalls.delete(cid);
           }
           if (!this.closed) {
-            this.sender(msgToSend);
+            await this.sender(msgToSend);
           }
         },
+        this.violator,
         this.logger,
       );
 
@@ -261,7 +267,7 @@ export class Callee extends MessageProcessor {
     return false;
   }
 
-  private unregister(reg: Registration): void {
+  private async unregister(reg: Registration): Promise<void> {
     if (this.closed) {
       throw new Error('callee closed');
     }
@@ -277,6 +283,6 @@ export class Callee extends MessageProcessor {
     }, err => {
       reg.onUnregistered.reject(err);
     });
-    this.sender(msg);
+    await this.sender(msg);
   }
 }

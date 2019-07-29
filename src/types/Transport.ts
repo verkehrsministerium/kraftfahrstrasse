@@ -33,5 +33,5 @@ export interface ITransport {
   name: string;
   Open(endpoint: string, callback: (ev: TransportEvent) => void): void;
   Close(code: number, reason: string): void;
-  Send(message: WampMessage): void;
+  Send(message: WampMessage): Promise<void>;
 }

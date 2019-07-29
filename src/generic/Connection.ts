@@ -220,8 +220,11 @@ export class Connection implements IConnection {
       this.connectionOptions.realm,
       details,
     ];
-    this.transport!.Send(msg);
-    this.state.update([EMessageDirection.SENT, EWampMessageID.HELLO]);
+    this.transport!.Send(msg).then(() => {
+      this.state.update([EMessageDirection.SENT, EWampMessageID.HELLO]);
+    }, err => {
+      this.handleProtocolViolation(`Transport error: ${err}`);
+    });
   }
 
   private processSessionMessage(msg: WampMessage): void {
@@ -236,20 +239,21 @@ export class Connection implements IConnection {
           if (!this.transport) {
             return;
           }
-          this.transport.Send([
+          return this.transport.Send([
             EWampMessageID.AUTHENTICATE,
             signature.signature,
             signature.details || {},
           ]);
+        }).then(() => {
           this.state.update([EMessageDirection.SENT, EWampMessageID.AUTHENTICATE]);
-        }, error => {
+        }).catch(error => {
           if (!this.transport) {
             return;
           }
           this.logger.log(
             LogLevel.WARNING,
             [
-              'Failed to compute challenge for auth provider',
+              'Failed to compute challenge or send for auth provider',
               this.connectionOptions.authProvider,
               error,
             ],
@@ -262,8 +266,8 @@ export class Connection implements IConnection {
         this.idGen = createIdGens();
         this.subHandlers = this.subFactories.map(handlerClass => {
           return new handlerClass(
-            msgToSend => {
-              this.transport!.Send(msgToSend);
+            async msgToSend => {
+              await this.transport!.Send(msgToSend);
             },
             reason => {
               this.handleProtocolViolation(reason);

@@ -21,7 +21,7 @@ class MultiSubscription {
   public onUnsubscribed: Deferred<void>;
   private handlers = new Map<WampID, Subscription>();
   private unsubscribed = false;
-  constructor(public subscriptionID: WampID, private unsubscribe: (sub: MultiSubscription) => void) {
+  constructor(public subscriptionID: WampID, private unsubscribe: (sub: MultiSubscription) => Promise<void>) {
     this.onUnsubscribed = new Deferred<void>();
     this.reinitCatch();
   }
@@ -45,7 +45,7 @@ class MultiSubscription {
       }, err => {
         sub.onUnsubscribed.reject(err);
       });
-      this.unsubscribe(this);
+      await this.unsubscribe(this);
     } else {
       sub.onUnsubscribed.resolve();
     }
@@ -155,14 +155,14 @@ export class Subscriber extends MessageProcessor {
       options || {},
       topic,
     ];
-    this.sender(msg);
+    await this.sender(msg);
     return this.subs.PutAndResolve(requestID).then(subscribed => {
       const subId = subscribed[2];
       this.logger.log(LogLevel.DEBUG, `ID: ${subId}, Subscribing ${topic}`);
 
       let subscriptionWrapper = this.currentSubscriptions.get(subId);
       if (!subscriptionWrapper) {
-        subscriptionWrapper = new MultiSubscription(subId, sub => this.sendUnsubscribe(sub));
+        subscriptionWrapper = new MultiSubscription(subId, async sub => await this.sendUnsubscribe(sub));
         this.currentSubscriptions.set(subId, subscriptionWrapper);
       }
       return new Subscription(handler as EventHandler<WampList, WampDict>, requestID, subscriptionWrapper, this.logger);
@@ -210,7 +210,7 @@ export class Subscriber extends MessageProcessor {
     return handled;
   }
 
-  private sendUnsubscribe(sub: MultiSubscription): void {
+  private async sendUnsubscribe(sub: MultiSubscription): Promise<void> {
     const requestID = this.idGen.session.ID();
     const msg: WampUnsubscribeMessage = [
       EWampMessageID.UNSUBSCRIBE,
@@ -223,6 +223,6 @@ export class Subscriber extends MessageProcessor {
     }, (err: any) => {
       sub.onUnsubscribed.reject(err);
     });
-    this.sender(msg);
+    await this.sender(msg);
   }
 }

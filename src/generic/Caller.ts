@@ -45,13 +45,18 @@ export class Caller extends MessageProcessor {
       kwArgs || {},
     ];
     this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Calling ${uri}`);
-    const result = new Deferred<CallResult<RA, RK>>();
-    this.pendingCalls.set(requestID, [result, !!details.receive_progress]);
-    this.sender(msg);
-    return [result.promise, requestID];
+    const proc = !!details.receive_progress;
+
+    const resultPromise = (async () => {
+      const result = new Deferred<CallResult<RA, RK>>();
+      await this.sender(msg);
+      this.pendingCalls.set(requestID, [result, proc]);
+      return result.promise;
+    })();
+    return [resultPromise, requestID];
   }
 
-  public CancelCall(callId: WampID, killMode?: ECallKillMode): void {
+  public async CancelCall(callId: WampID, killMode?: ECallKillMode): Promise<void> {
     // TODO: Check if call canceling supported by router
     if (this.closed) {
       throw new Error('caller closed');
@@ -66,7 +71,7 @@ export class Caller extends MessageProcessor {
       { mode: killMode || '' },
     ];
     this.logger.log(LogLevel.DEBUG, `Cancelling Call ${callId}`);
-    this.sender(msg);
+    await this.sender(msg);
   }
 
   protected onClose(): void {
