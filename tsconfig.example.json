@@ -1,8 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "esnext",
-    "module": "commonjs",
     "baseUrl": ".",
     "paths": {
       "@verkehrsministerium/kraftfahrstrasse": ["src/index"],
