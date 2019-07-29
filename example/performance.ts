@@ -50,7 +50,7 @@ async function main() {
 
   while (true) {
     let now = getTimestamp();
-    if (now - time > 1000) {
+    if (now - time >= 1000) {
       console.log(`${msgs} in ${(now - time) / 1000} second(s)`);
       msgs = 0;
       time = now;
