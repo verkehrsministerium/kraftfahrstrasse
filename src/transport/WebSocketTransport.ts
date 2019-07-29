@@ -1,5 +1,3 @@
-
-
 import { WampDict } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
 import { IsBinarySerializer, ISerializer } from '../types/Serializer';
