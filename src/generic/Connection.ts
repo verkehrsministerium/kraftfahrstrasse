@@ -24,7 +24,7 @@ import {
   LogLevel,
 } from '../types/Connection';
 import { WampWelcomeMessage, WelcomeDetails } from '../types/messages/WelcomeMessage';
-import { ETransportEventType, ITransport } from '../types/Transport';
+import { ETransportEventType, ITransport, TransportEvent } from '../types/Transport';
 import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
 import { Callee } from './Callee';
 import { Caller } from './Caller';
@@ -75,11 +75,8 @@ export class Connection implements IConnection {
     );
     this.state = new ConnectionStateMachine();
     this.onOpen = new Deferred();
-    setTimeout(() => {
-      this.runConnection().catch(err => {
-        this.logger.log(LogLevel.ERROR, `Error in Main Loop: ${err}`);
-      });
-    }, 0);
+    this.transport.Open(this.connectionOptions.endpoint, this.handleTransportEvent.bind(this));
+
     this.logger.log(
       LogLevel.DEBUG,
       `Opened Connection with ${this.connectionOptions.serializer.ProtocolID()} and ${this.transport.name}`,
@@ -158,56 +155,53 @@ export class Connection implements IConnection {
     return this.subHandlers[0].Publish(uri, args, kwargs, opts);
   }
 
-  private async runConnection(): Promise<void> {
-    const endpoint = this.connectionOptions.endpoint;
-    this.transport!.Open(endpoint, event => {
-      switch (event.type) {
-        case ETransportEventType.OPEN: {
-          this.sendHello();
-          break;
-        }
-        case ETransportEventType.MESSAGE: {
-          if (this.state.getState() === EConnectionState.ESTABLISHED) {
-            this.processMessage(event.message);
-          } else {
-            this.processSessionMessage(event.message);
-          }
-          break;
-        }
-        case ETransportEventType.ERROR: {
-          if (this.state.getState() !== EConnectionState.ESTABLISHED && !!this.onOpen) {
-            this.onOpen.reject(event.error);
-            this.onOpen = null;
-          }
-          break;
-        }
-        case ETransportEventType.CLOSE: {
-          this.transport = null;
-          const state = this.state.getState();
-          this.state = new ConnectionStateMachine();
-          if (!!this.subHandlers) {
-            this.subHandlers.forEach(h => h.Close());
-            this.subHandlers = null;
-          }
-          if (state !== EConnectionState.ESTABLISHED && !!this.onOpen) {
-            this.onOpen.reject(event.reason);
-            this.onOpen = null;
-          } else if (!!this.onClose) {
-            if (event.wasClean) {
-              this.onClose.resolve({
-                code: event.code,
-                reason: event.reason,
-                wasClean: event.wasClean,
-              });
-            } else {
-              this.onClose.reject(new ConnectionCloseError(event.reason, event.code));
-            }
-            this.onClose = null;
-          }
-          break;
-        }
+  private handleTransportEvent(event: TransportEvent): void {
+    switch (event.type) {
+      case ETransportEventType.OPEN: {
+        this.sendHello();
+        break;
       }
-    });
+      case ETransportEventType.MESSAGE: {
+        if (this.state.getState() === EConnectionState.ESTABLISHED) {
+          this.processMessage(event.message);
+        } else {
+          this.processSessionMessage(event.message);
+        }
+        break;
+      }
+      case ETransportEventType.ERROR: {
+        if (this.state.getState() !== EConnectionState.ESTABLISHED && !!this.onOpen) {
+          this.onOpen.reject(event.error);
+          this.onOpen = null;
+        }
+        break;
+      }
+      case ETransportEventType.CLOSE: {
+        this.transport = null;
+        const state = this.state.getState();
+        this.state = new ConnectionStateMachine();
+        if (!!this.subHandlers) {
+          this.subHandlers.forEach(h => h.Close());
+          this.subHandlers = null;
+        }
+        if (state !== EConnectionState.ESTABLISHED && !!this.onOpen) {
+          this.onOpen.reject(event.reason);
+          this.onOpen = null;
+        } else if (!!this.onClose) {
+          if (event.wasClean) {
+            this.onClose.resolve({
+              code: event.code,
+              reason: event.reason,
+              wasClean: event.wasClean,
+            });
+          } else {
+            this.onClose.reject(new ConnectionCloseError(event.reason, event.code));
+          }
+          this.onClose = null;
+        }
+        break;
+      }
+    }
   }
 
   private sendHello(): void {
