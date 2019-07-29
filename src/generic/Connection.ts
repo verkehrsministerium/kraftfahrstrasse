@@ -160,7 +160,7 @@ export class Connection implements IConnection {
 
   private async runConnection(): Promise<void> {
     const endpoint = this.connectionOptions.endpoint;
-    for await (const event of this.transport!.Open(endpoint)) {
+    this.transport!.Open(endpoint, event => {
       switch (event.type) {
         case ETransportEventType.OPEN: {
           this.sendHello();
@@ -168,9 +168,9 @@ export class Connection implements IConnection {
         }
         case ETransportEventType.MESSAGE: {
           if (this.state.getState() === EConnectionState.ESTABLISHED) {
-            await this.processMessage(event.message);
+            this.processMessage(event.message);
           } else {
-            await this.processSessionMessage(event.message);
+            this.processSessionMessage(event.message);
           }
           break;
         }
@@ -207,10 +207,7 @@ export class Connection implements IConnection {
           break;
         }
       }
-      if (event.type === ETransportEventType.CLOSE || event.type === ETransportEventType.ERROR) {
-        break; // exit loop.
-      }
-    }
+    });
   }
 
   private sendHello(): void {
@@ -233,21 +230,38 @@ export class Connection implements IConnection {
     this.state.update([EMessageDirection.SENT, EWampMessageID.HELLO]);
   }
 
-  private async processSessionMessage(msg: WampMessage): Promise<void> {
+  private processSessionMessage(msg: WampMessage): void {
     if (!this.transport) {
-      return Promise.reject('transport closed');
+      return;
     }
     this.state.update([EMessageDirection.RECEIVED, msg[0]]);
     switch (this.state.getState()) {
       case EConnectionState.CHALLENGING: {
         const challengeMsg = msg as WampChallengeMessage;
-        const signature = await this.connectionOptions.authProvider.ComputeChallenge(challengeMsg[2] || {});
-        this.transport.Send([
-          EWampMessageID.AUTHENTICATE,
-          signature.signature,
-          signature.details || {},
-        ]);
-        this.state.update([EMessageDirection.SENT, EWampMessageID.AUTHENTICATE]);
+        this.connectionOptions.authProvider.ComputeChallenge(challengeMsg[2] || {}).then(signature => {
+          if (!this.transport) {
+            return;
+          }
+          this.transport.Send([
+            EWampMessageID.AUTHENTICATE,
+            signature.signature,
+            signature.details || {},
+          ]);
+          this.state.update([EMessageDirection.SENT, EWampMessageID.AUTHENTICATE]);
+        }, error => {
+          if (!this.transport) {
+            return;
+          }
+          this.logger.log(
+            LogLevel.WARNING,
+            [
+              'Failed to compute challenge for auth provider',
+              this.connectionOptions.authProvider,
+              error,
+            ],
+          );
+          this.transport.Close(3000, 'Authentication failed');
+        });
         break;
       }
       case EConnectionState.ESTABLISHED: {
@@ -309,7 +323,7 @@ export class Connection implements IConnection {
     }
   }
 
-  private async processMessage(msg: WampMessage): Promise<void> {
+  private processMessage(msg: WampMessage): void {
     if (msg[0] === EWampMessageID.GOODBYE) {
       this.state.update([EMessageDirection.RECEIVED, msg[0]]);
       return;

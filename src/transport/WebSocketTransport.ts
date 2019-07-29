@@ -1,4 +1,4 @@
-import { Channel } from 'queueable';
+
 
 import { WampDict } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
@@ -11,7 +11,7 @@ export interface IWebSocketFactory {
 
 export abstract class WebSocketTransport implements ITransport {
   protected webSocket: WebSocket | null = null;
-  private channel = new Channel<TransportEvent>();
+  private callback: ((ev: TransportEvent) => void) | null = null;
 
   constructor(
     public name: string,
@@ -21,22 +21,23 @@ export abstract class WebSocketTransport implements ITransport {
   ) {
   }
 
-  public Open(endpoint: string): AsyncIterableIterator<TransportEvent> {
+  public Open(endpoint: string, cb: (ev: TransportEvent) => void) {
     if (!!this.webSocket) {
-      const channel = new Channel<TransportEvent>();
-      channel.push({
+      cb({
         type: ETransportEventType.ERROR,
         error: 'Transport already opened!',
       });
-      return channel;
+      return;
     }
 
     this.webSocket = new this.webSocketFactory(endpoint, this.serializer.ProtocolID(), this.transportOptions);
+    this.callback = cb;
+
     if (IsBinarySerializer(this.serializer)) {
       this.webSocket.binaryType = 'arraybuffer';
     }
     this.webSocket.onopen = () => {
-      this.channel.push({
+      cb({
         type: ETransportEventType.OPEN,
       });
     };
@@ -44,12 +45,12 @@ export abstract class WebSocketTransport implements ITransport {
     this.webSocket.onmessage = ev => {
       try {
         const msg = (this.serializer.Deserialize as any)(ev.data);
-        this.channel.push({
+        cb({
           type: ETransportEventType.MESSAGE,
           message: msg,
         });
       } catch (err) {
-        this.channel.push({
+        cb({
           type: ETransportEventType.ERROR,
           error: err,
         });
@@ -58,37 +59,43 @@ export abstract class WebSocketTransport implements ITransport {
     this.webSocket.onclose = ev => {
       this.webSocket!.onclose = null;
       this.webSocket!.onerror = null;
-      this.channel.push({
+      this.callback = null;
+      this.webSocket = null;
+      cb({
         type: ETransportEventType.CLOSE,
         code: ev.code,
         reason: ev.reason,
         wasClean: ev.wasClean,
       });
     };
-    this.webSocket.onerror = err => {
+    this.webSocket.onerror = (err: any) => {
       this.webSocket!.onclose = null;
       this.webSocket!.onerror = null;
-      this.channel.push({
+      this.callback = null;
+      this.webSocket = null;
+      cb({
         type: ETransportEventType.ERROR,
-        error: `Transport error: ${err}`,
+        error: `Transport error: ${err.error}`,
       });
     };
-    return this.channel;
   }
 
   public Close(code: number, reason: string): void {
-    if (!this.webSocket) {
+    if (!this.webSocket || !this.callback) {
       return;
     }
     this.webSocket.onclose = null;
+    this.webSocket.onerror = null;
     this.webSocket.close(code, reason);
-    this.channel.push({
+    this.callback({
       type: ETransportEventType.CLOSE,
 
       code,
       reason,
       wasClean: true,
     });
+    this.callback = null;
+    this.webSocket = null;
   }
 
   public Send(msg: WampMessage): void {

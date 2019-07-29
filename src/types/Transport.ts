@@ -31,7 +31,7 @@ export interface ITransportFactory {
 
 export interface ITransport {
   name: string;
-  Open(endpoint: string): AsyncIterableIterator<TransportEvent>;
+  Open(endpoint: string, callback: (ev: TransportEvent) => void): void;
   Close(code: number, reason: string): void;
   Send(message: WampMessage): void;
 }
