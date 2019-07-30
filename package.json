@@ -16,7 +16,8 @@
     "lint": "tslint -c tslint.json src/**/*.ts -p .",
     "test": "echo \"Error: no test specified\" && exit 1",
     "example": "ts-node -r tsconfig-paths/register -P tsconfig.example.json example/$*",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "prepack": "npm ci && npm run build"
   },
   "repository": {
     "type": "git",
