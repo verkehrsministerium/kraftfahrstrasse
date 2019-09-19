@@ -37,6 +37,11 @@ The example below is intended to be run in node, if you'd like to run it in the 
 to `BrowserWebSocketTransport`.
 
 ```ts
+/*
+First of all, import all required classes.
+You're always going to need the Connection, a serializer and a transport.
+For servers which require authentication, an AuthProvider is required.
+*/
 import {
   AnonymousAuthProvider,
   Connection,
@@ -44,27 +49,108 @@ import {
   NodeWebSocketTransport,
 } from 'kraftfahrstrasse';
 
+// Create a new connection object, using the parameters below.
 const connection = new Connection({
   endpoint: "ws://localhost:4000", // Provide your broker URL here
-  realm: "robulab", // Your realm.
+  realm: "realm01", // Your realm.
 
-  serializer: new JSONSerializer(), // Provide an **instance** of a ISerializer
-  transport: NodeWebSocketTransport, // Provide a **class** of a ITransport (ITransportFactory)
+  // The serializer you choose here impacts the handshake performed 
+  // with the server, and is fixed during the lifetime 
+  // of the connection. 
+  // Typically, you would use JSON or MSGPack.
+  // Provide an **instance** of a ISerializer here.
+  serializer: new JSONSerializer(),
+  
+  // The transport you choose here selects the way how messages are 
+  // sent to the server. 
+  // You want to use a WebSocket transport here.
+  // Provide a **factory** of a ITransport (ITransportFactory)
+  transport: NodeWebSocketTransport, 
+
   transportOptions: {
     // Additional options passed directly into the transport constructor.
+    // Documentation can be found in the documentation of the transport factories
   },
-  authProvider: new AnonymousAuthProvider(), // Pass an **instance** of a IAuthProvider to authenticate
 
-  logFunction: console.log as any, // Optionally, pass a function used to debug kraftfahrstrasse
+  // This class defines how the handshake with the server works.
+  // It is used to provide a username, the authentication method 
+  // and,optionally, more details like a password.
+  // Pass an **instance** of a IAuthProvider to authenticate
+  authProvider: new AnonymousAuthProvider(), 
+
+  // Optionally, pass a function used to debug kraftfahrstrasse
+  logFunction: console.log as any, 
 });
 
 const main = async () => {
-  await connection.Open(); // wait until the connection is opened, after this point, you may use
-  // .Call, .Register, .Subscribe, .Publish, .CancelCall of the connection object.
+  // wait until the connection is opened, after this point,
+  // you may use .Call, .Register, .Subscribe, .Publish,
+  // .CancelCall of the connection object.
+  await connection.Open(); 
+  
+  // Example on how to subscribe to a topic
+  const sub = await connection.Subscribe(
+    "com.example.topic", // Topic
+    (args, kwargs, details) => { // Event Handler
+      console.log("Subscription:", args, kwargs, details);
+    },
+    {} // Advanced subscribe options, optional
+  );
 
-  const sub = await connection.Subscribe("com.robulab.target.create", (args, kwargs, details) => {
-    console.log("Subscription:", args, kwargs, details);
-  }, {});
+  // To unsubscribe, use:
+  await sub.Unsubscribe();
+
+  // Example on how to publish to a topic
+  const pub = await connection.Publish(
+    "com.example.topic", // Topic
+    ["Hello World"], // Positional Arguments
+    {}, // Keyword Arguments (optional)
+    { // Advanced options (optional)
+      // Request an answer from the router when
+      // the publication has been delivered.
+      "acknowledge": true, 
+      // ...
+    }
+  );
+  const id = await pub.OnPublished();
+  console.log('Published event as', id);
+
+  // Register a procedure
+  const reg = await connection.Register(
+    "com.example.rpc", // Function name
+    async (args, kwargs, details) => { // Handler (asynchronous!)
+      console.log('Got invoked:', args, kwargs, details);
+
+      // Handlers can also return values.
+      return {
+        args,
+        kwargs,
+      };
+    },
+    {} // Advanced registration options.
+  );
+
+  // And unregister:
+  await reg.Unregister();
+
+  // Call a remote procedure
+  // A call returns **TWO** values:
+  // A promise of the call result, and its ID.
+  // You can use the Call ID to cancel the call, when the router
+  // supports call cancelation.
+  const call = connection.Call(
+    "com.example.rpc", // Function name
+    ["Hello, World"], // Positional Arguments
+    {}, // Keyword Arguments
+    {}, // Advanced options.
+  );
+
+  // So to get the call result:
+  const result = await call[0];
+  console.log('Got call result:', result);
+
+  // To cancel the running call:
+  await connection.CancelCall(result[1], 'kill');
 }
 await main();
 ```
@@ -90,11 +176,14 @@ In the sections of the transports, the possible options are described.
 
 #### BrowserWebSocketTransport
 
-- TBD
+No further configuration is supported in a browser context.
 
 #### NodeWebSocketTransport
 
-- TBD
+The NodeWebSocketTransport uses the [ws library](https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket) under the hood, so head over to their documentation for an up-to-date list of configuration options.
+The `transportOptions` dict will be passed directly as `options` argument into the `ws` constructor.
+
+Typically, you would like to set a custom CA, client certificates for TLS Authentication or connect timeout here.
 
 ### Serializers
 
@@ -104,11 +193,18 @@ Both serializers confirm to the WAMP spec, however we provide the possibility to
 
 #### JSONSerializer
 
-- TBD
+This serializer uses the `JSON` object present in nodeJS and modern browsers to encode and decode json. It follows the WAMP specification for [binary message handling](https://wamp-proto.org/_static/gen/wamp_latest_ietf.html#rfc.section.15).
 
-#### MSGPackSerialzer
+The subprotocol for the json serializer is: `wamp.2.json`.
 
-- TBD
+#### BrowserMSGPackSerialzer/NodeMSGPackSerializer
+
+This serializer uses [msgpack5](https://github.com/mcollina/msgpack) to provide a more space-efficient serialization. It uses the `wamp.2.msgpack` subprotocol.
+
+**Attention**: This serializer handles binary data as an extension to allow de-/reencoding of binary data at the server side to JSON.
+It is therefore NOT compatible with the crossbar.io router.
+If you absolutely need binary data, you can write your own msgpack serializer which is compatible with crossbar.io.
+
 
 ### Authentication
 
@@ -121,12 +217,12 @@ secret or challenge/response at protocol level but instead rely on the transport
 
 #### AnonymousAuthProvider
 
-AnonymousAuthProvider represents the `anonymous` authentication method, it allows the user to specify a username
+[AnonymousAuthProvider](https://github.com/verkehrsministerium/kraftfahrstrasse/blob/master/src/auth/Anonymous.ts) represents the `anonymous` authentication method, it allows the user to specify a username
 (with a fallback on `anonymous` if none is provided).
 
 #### TicketAuthProvider
 
-TicketAuthProvider represents the `ticket` authentication method, using a shared secret to authenticate.
+[TicketAuthProvider](https://github.com/verkehrsministerium/kraftfahrstrasse/blob/master/src/auth/Ticket.ts) represents the `ticket` authentication method, using a shared secret to authenticate.
 TicketAuthProviders are used when using `kraftfahrstrasse` along with [autobahnkreuz](https://github.com/EmbeddedEnterprises/autobahnkreuz) to authenticate
 users.
 
@@ -135,8 +231,12 @@ calls a user defined function to calculate the ticket based on the server issued
 
 #### CookieAuthProvider
 
-- TBD
+The CookieAuthProvider is a transport-level authentication provider, which means that this connection is identified by the client who presented cookies at the connection establishment procedure.
+No further configuration is required.
 
 #### TLSAuthProvider
 
-- TBD
+The TLSAuthProvider is a transport-level authentication provider, which means that this connection is identified by the client who presented a TLS client certificate at the connection establishment procedure.
+No further configuration is required.
+
+We recommend using the TLSAuthProvider for backend components.
