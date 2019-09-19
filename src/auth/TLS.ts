@@ -5,6 +5,7 @@ import { TransportLevelProvider } from './TransportProvider';
  * Providing an instance of this class means that the client thinks
  * that it is already authenticated by presenting a TLS client cert on the
  * transport level.
+ * @category auth
  */
 export class TLSAuthProvider extends TransportLevelProvider {
   /**

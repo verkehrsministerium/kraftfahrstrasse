@@ -4,6 +4,7 @@ import { WampDict } from '../types/messages/MessageTypes';
 /**
  * Helper class to configure transport level authentication.
  * This class should not be used directly as authentication provider.
+ * @category auth
  */
 export class TransportLevelProvider implements IAuthProvider {
   /**

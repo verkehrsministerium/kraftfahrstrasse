@@ -8,6 +8,7 @@ import { WampDict } from '../types/messages/MessageTypes';
  * so we can't just store it at the instance level.
  * Instead, we defer the actual password generation to the
  * user of our code and just pass it around as return value.
+ * @category auth
  *
  * @param authExtra Additional details which are sent by the server
  * which can be used by the client to compute its response.
@@ -17,6 +18,7 @@ export type GetTicketFunc = (authExtra: WampDict) => Promise<Signature>;
 
 /**
  * TicketAuthProvider is a class which is used to login with username and password or any other sort of static token.
+ * @category auth
  */
 export class TicketAuthProvider implements IAuthProvider {
   /**

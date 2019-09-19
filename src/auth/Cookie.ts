@@ -5,6 +5,7 @@ import { TransportLevelProvider } from './TransportProvider';
  * Providing an instance of this class means that the client thinks
  * that it is already authenticated by the cookies it sent
  * on the transport level.
+ * @category auth
  */
 export class CookieAuthProvider extends TransportLevelProvider {
   /**

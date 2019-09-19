@@ -2,6 +2,7 @@ import { WampDict } from './messages/MessageTypes';
 
 /**
  * Signature is the type an authentication provider provides its results in.
+ * @category auth
  */
 export type Signature = {
   /**
@@ -22,6 +23,7 @@ export type Signature = {
  * - Session Level (based on tokens, such as passwords or resume tokens).
  * These are distinguished by the [[IsTransportLevel]] method.
  * For transport level authentication methods, ComputeChallenge won't be called.
+ * @category auth
  */
 export interface IAuthProvider {
   /**
