@@ -1,4 +1,3 @@
-import { Deferred } from 'queueable';
 
 import { MessageProcessor } from './MessageProcessor';
 
@@ -6,6 +5,7 @@ import { CallResult, LogLevel } from '../types/Connection';
 import { CallOptions, ECallKillMode, WampCallMessage, WampCancelMessage } from '../types/messages/CallMessage';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
+import { Deferred } from '../util/deferred';
 
 export class Caller extends MessageProcessor {
   public static GetFeatures(): WampDict {
@@ -50,7 +50,7 @@ export class Caller extends MessageProcessor {
     const resultPromise = (async () => {
       const result = new Deferred<CallResult<RA, RK>>();
       await this.sender(msg);
-      this.pendingCalls.set(requestID, [result, proc]);
+      this.pendingCalls.set(requestID, [result as Deferred<CallResult<any, any>>, proc]);
       return result.promise;
     })();
     return [resultPromise, requestID];

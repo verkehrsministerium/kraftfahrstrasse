@@ -1,4 +1,3 @@
-import { Deferred } from 'queueable';
 
 import { MessageProcessor } from './MessageProcessor';
 
@@ -15,6 +14,7 @@ import { Logger } from '../logging/Logger';
 import { EventHandler, ISubscription, LogLevel } from '../types/Connection';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
+import { Deferred } from '../util/deferred';
 import { PendingMap } from '../util/map';
 
 class MultiSubscription {

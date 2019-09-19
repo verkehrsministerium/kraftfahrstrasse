@@ -6,6 +6,7 @@
   "module": "build/module/index.js",
   "types": "build/types/index.d.ts",
   "private": false,
+  "sideEffects": false,
   "files": [
     "build"
   ],
@@ -46,7 +47,6 @@
   "homepage": "https://github.com/verkehrsministerium/kraftfahrstrasse#readme",
   "dependencies": {
     "msgpack5": "^4.2.1",
-    "queueable": "^4.1.2",
     "ws": "^7.1.1"
   },
   "devDependencies": {

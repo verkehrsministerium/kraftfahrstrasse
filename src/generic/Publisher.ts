@@ -1,10 +1,10 @@
-import { Deferred } from 'queueable';
 import { MessageProcessor } from './MessageProcessor';
 
 import { IPublication, LogLevel } from '../types/Connection';
 import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import { PublishOptions, WampPublishedMessage, WampPublishMessage } from '../types/messages/PublishMessage';
 import { WampMessage } from '../types/Protocol';
+import { Deferred } from '../util/deferred';
 import { PendingMap } from '../util/map';
 
 export class Publication implements IPublication {

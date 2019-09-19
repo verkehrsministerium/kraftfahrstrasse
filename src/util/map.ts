@@ -1,4 +1,5 @@
-import { Deferred } from 'queueable';
+
+import { Deferred } from './deferred';
 
 import { EWampMessageID, WampID } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';

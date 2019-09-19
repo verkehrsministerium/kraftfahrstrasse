@@ -1,5 +1,3 @@
-import { Deferred } from 'queueable';
-
 import { Logger } from '../logging/Logger';
 import { CallHandler, CallResult, IRegistration, LogLevel } from '../types/Connection';
 
@@ -13,6 +11,7 @@ import {
   WampUnregisterMessage,
 } from '../types/messages/RegisterMessage';
 import { WampMessage } from '../types/Protocol';
+import { Deferred } from '../util/deferred';
 import { PendingMap } from '../util/map';
 
 import { MessageProcessor, ProtocolViolator } from './MessageProcessor';

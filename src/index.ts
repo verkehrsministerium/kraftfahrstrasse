@@ -25,7 +25,8 @@ export { NodeWebSocketTransport } from './transport/NodeWebSocketTransport';
 
 // Export different serializers
 export { JSONSerializer } from './serialize/JSON';
-// To use the MSGPack serialization, you have to import it explicitly
+export { BrowserMSGPackSerializer } from './serialize/BrowserMSGPack';
+export { NodeMSGPackSerializer } from './serialize/NodeMSGPack';
 
 // Export the different authentication providers
 export { TransportLevelProvider } from './auth/TransportProvider';

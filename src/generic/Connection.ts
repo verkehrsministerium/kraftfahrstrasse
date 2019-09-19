@@ -1,4 +1,3 @@
-import { Deferred } from 'queueable';
 
 import { CallOptions, ECallKillMode } from '../types/messages/CallMessage';
 import { HelloMessageDetails, WampHelloMessage } from '../types/messages/HelloMessage';
@@ -25,7 +24,9 @@ import {
 } from '../types/Connection';
 import { WampWelcomeMessage, WelcomeDetails } from '../types/messages/WelcomeMessage';
 import { ETransportEventType, ITransport, TransportEvent } from '../types/Transport';
+import { Deferred } from '../util/deferred';
 import { GlobalIDGenerator, SessionIDGenerator } from '../util/id';
+
 import { Callee } from './Callee';
 import { Caller } from './Caller';
 import { ConnectionStateMachine, EConnectionState, EMessageDirection } from './ConnectionStateMachine';
