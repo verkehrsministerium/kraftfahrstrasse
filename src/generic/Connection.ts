@@ -285,6 +285,10 @@ export class Connection implements IConnection {
         const [, sessionId, welcomeDetails] = estabishedMessage;
 
         this.sessionId = sessionId;
+        this.logger.log(
+          LogLevel.DEBUG,
+          `Opened Connection with ${this.connectionOptions.serializer.ProtocolID()} and ${this.transport.name}`,
+        );
         this.onOpen!.resolve(welcomeDetails);
         this.onOpen = null;
         break;
