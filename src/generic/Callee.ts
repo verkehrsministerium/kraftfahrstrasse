@@ -187,8 +187,9 @@ export class Callee extends MessageProcessor {
       uri,
     ];
     this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Registering ${uri}`);
+    const reg = this.regs.PutAndResolve(requestID);
     await this.sender(msg);
-    const registered = await this.regs.PutAndResolve(requestID);
+    const registered = await reg;
     const regID = registered[2];
     const registration = new Registration(regID, handler as any, async id => await this.unregister(id));
     this.currentRegistrations.set(regID, registration);
@@ -276,12 +277,14 @@ export class Callee extends MessageProcessor {
       requestID,
       reg.ID(),
     ];
-    this.unregs.PutAndResolve(requestID).then(() => {
+    const unreg = this.unregs.PutAndResolve(requestID);
+    try {
+      await this.sender(msg);
+      await unreg;
       this.currentRegistrations.delete(reg.ID());
       reg.onUnregistered.resolve();
-    }, err => {
-      reg.onUnregistered.reject(err);
-    });
-    await this.sender(msg);
+    } catch (e) {
+      reg.onUnregistered.reject(e);
+    }
   }
 }

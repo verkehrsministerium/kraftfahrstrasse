@@ -155,8 +155,9 @@ export class Subscriber extends MessageProcessor {
       options || {},
       topic,
     ];
+    const subscribedPromise = this.subs.PutAndResolve(requestID);
     await this.sender(msg);
-    return this.subs.PutAndResolve(requestID).then(subscribed => {
+    return subscribedPromise.then(subscribed => {
       const subId = subscribed[2];
       this.logger.log(LogLevel.DEBUG, `ID: ${subId}, Subscribing ${topic}`);
 

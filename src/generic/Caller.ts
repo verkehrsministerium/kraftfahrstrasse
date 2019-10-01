@@ -49,8 +49,8 @@ export class Caller extends MessageProcessor {
 
     const resultPromise = (async () => {
       const result = new Deferred<CallResult<RA, RK>>();
-      await this.sender(msg);
       this.pendingCalls.set(requestID, [result as Deferred<CallResult<any, any>>, proc]);
+      await this.sender(msg);
       return result.promise;
     })();
     return [resultPromise, requestID];

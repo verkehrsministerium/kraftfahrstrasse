@@ -72,7 +72,6 @@ export class Publisher extends MessageProcessor {
       args || [],
       kwArgs || {},
     ];
-    await this.sender(msg);
     this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Publishing ${topic}`);
 
     const publication = new Publication(requestID, !!options.acknowledge);
@@ -83,6 +82,7 @@ export class Publisher extends MessageProcessor {
         publication.fail(err);
       });
     }
+    await this.sender(msg);
     return publication;
   }
 
