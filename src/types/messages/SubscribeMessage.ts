@@ -1,4 +1,4 @@
-import { WampDict, EMatchPolicy, EWampMessageID, WampList, WampID, WampURI } from './MessageTypes';
+import { EMatchPolicy, EWampMessageID, WampDict, WampID, WampList, WampURI } from './MessageTypes';
 
 export type SubscribeOptions = {
   nkey?: string;
@@ -10,7 +10,7 @@ export type EventDetails = {
   publisher_authid?: string;
   publisher_authrole?: string | string[];
   trustlevel?: number;
-  topic?: WampURI;
+  topic: WampURI;
   retained?: boolean;
   publicationId?: WampID;
 } & WampDict;

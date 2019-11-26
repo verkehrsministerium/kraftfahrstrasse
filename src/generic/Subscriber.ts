@@ -21,7 +21,11 @@ class MultiSubscription {
   public onUnsubscribed: Deferred<void>;
   private handlers = new Map<WampID, Subscription>();
   private unsubscribed = false;
-  constructor(public subscriptionID: WampID, private unsubscribe: (sub: MultiSubscription) => Promise<void>) {
+  constructor(
+    public subscriptionID: WampID,
+    public readonly uri: WampURI,
+    private unsubscribe: (sub: MultiSubscription) => Promise<void>,
+  ) {
     this.onUnsubscribed = new Deferred<void>();
     this.reinitCatch();
   }
@@ -163,7 +167,7 @@ export class Subscriber extends MessageProcessor {
 
       let subscriptionWrapper = this.currentSubscriptions.get(subId);
       if (!subscriptionWrapper) {
-        subscriptionWrapper = new MultiSubscription(subId, async sub => await this.sendUnsubscribe(sub));
+        subscriptionWrapper = new MultiSubscription(subId, topic, async sub => await this.sendUnsubscribe(sub));
         this.currentSubscriptions.set(subId, subscriptionWrapper);
       }
       return new Subscription(handler as EventHandler<WampList, WampDict>, requestID, subscriptionWrapper, this.logger);
@@ -199,6 +203,9 @@ export class Subscriber extends MessageProcessor {
       this.logger.log(LogLevel.DEBUG, `Subscription ID: ${subId}, Received Event`);
       const details = msg[3];
       details.publicationId = msg[2];
+      if (!details.topic) {
+        details.topic = subscription.uri;
+      }
       subscription.trigger(msg[4] || [], msg[5] || {}, details);
 
       return true;

@@ -1,4 +1,4 @@
-import { EWampMessageID, WampID, WampURI, WampDict, WampList } from './MessageTypes';
+import { EWampMessageID, WampDict, WampID, WampList, WampURI } from './MessageTypes';
 
 export enum ECallRunMode {
   PARTITION = 'partition',
@@ -27,7 +27,7 @@ export type CancelOptions = {
 } & WampDict;
 
 export type InvocationDetails = {
-  procedure?: string;
+  procedure: string;
   receive_progress?: boolean;
   caller?: WampID;
   caller_authid?: string;

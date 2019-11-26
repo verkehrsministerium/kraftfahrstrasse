@@ -2,7 +2,7 @@ import { Logger } from '../logging/Logger';
 import { CallHandler, CallResult, IRegistration, LogLevel } from '../types/Connection';
 
 import { InvocationDetails, WampYieldMessage } from '../types/messages/CallMessage';
-import { EWampMessageID, WampDict, WampID, WampList } from '../types/messages/MessageTypes';
+import { EWampMessageID, WampDict, WampID, WampList, WampURI } from '../types/messages/MessageTypes';
 import {
   RegisterOptions,
   WampRegisteredMessage,
@@ -21,6 +21,7 @@ class Registration implements IRegistration {
   public onUnregistered = new Deferred<void>();
   constructor(
     private id: WampID,
+    public readonly uri: WampURI,
     public handler: CallHandler<WampList, WampDict, WampList, WampDict>,
     private unregister: (reg: Registration) => Promise<void>,
   ) {
@@ -191,7 +192,7 @@ export class Callee extends MessageProcessor {
     await this.sender(msg);
     const registered = await reg;
     const regID = registered[2];
-    const registration = new Registration(regID, handler as any, async id => await this.unregister(id));
+    const registration = new Registration(regID, uri, handler as any, async id => await this.unregister(id));
     this.currentRegistrations.set(regID, registration);
     return registration;
   }
@@ -230,6 +231,10 @@ export class Callee extends MessageProcessor {
       if (!reg) {
         this.violator('unexpected INVOCATION');
         return true;
+      }
+      const actualDetails = details || {};
+      if (!actualDetails.procedure) {
+        actualDetails.procedure = reg.uri;
       }
       const call = new Call(
         reg.handler, // Call Handler function
