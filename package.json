@@ -47,11 +47,11 @@
   "homepage": "https://github.com/verkehrsministerium/kraftfahrstrasse#readme",
   "dependencies": {
     "msgpack5": "^4.2.1",
+    "@types/ws": "^7.2.2",
     "ws": "^7.2.3"
   },
   "devDependencies": {
     "@types/msgpack5": "^3.4.1",
-    "@types/ws": "^7.2.2",
     "semantic-release": "^17.0.4",
     "ts-node": "^8.6.2",
     "tsconfig-paths": "^3.9.0",
