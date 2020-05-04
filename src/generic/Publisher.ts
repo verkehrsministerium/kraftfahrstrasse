@@ -82,7 +82,12 @@ export class Publisher extends MessageProcessor {
         publication.fail(err);
       });
     }
-    await this.sender(msg);
+    try {
+      await this.sender(msg);
+    } catch (err) {
+      this.publications.Remove(requestID, err);
+      throw err;
+    }
     return publication;
   }
 

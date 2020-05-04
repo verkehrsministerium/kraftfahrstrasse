@@ -16,6 +16,7 @@ import { PendingMap } from '../util/map';
 
 import { MessageProcessor, ProtocolViolator } from './MessageProcessor';
 import { WampError } from './WampError';
+import { SerializationError } from '../transport/SerializationError';
 
 class Registration implements IRegistration {
   public onUnregistered = new Deferred<void>();
@@ -57,7 +58,7 @@ class Call {
     handler: CallHandler<WampList, WampDict, WampList, WampDict>,
     args: WampList, kwArgs: WampDict, details: InvocationDetails,
     public callid: WampID,
-    private sender: (cid: number, msg: WampMessage, finish: boolean) => void,
+    private sender: (cid: number, msg: WampMessage, finish: boolean) => Promise<void>,
     private violator: ProtocolViolator,
     private logger: Logger,
   ) {
@@ -100,7 +101,14 @@ class Call {
       if (!res.nextResult && !this.cancelled) {
         this.onCancel.reject();
       }
-      await this.sender(this.callid, yieldmsg, !res.nextResult);
+      try {
+        await this.sender(this.callid, yieldmsg, !res.nextResult);
+      } catch (err) {
+        if (err instanceof SerializationError) {
+          this.logger.log(LogLevel.WARNING, `Serialization for ${this.callid} failed, sending error`);
+          await this.onHandlerError(new WampError('wamp.error.serialization-error'));
+        }
+      }
       this.logger.log(LogLevel.DEBUG, `ID: ${this.callid}, Sending Yield`);
     }
     if (res.nextResult) {
@@ -189,7 +197,12 @@ export class Callee extends MessageProcessor {
     ];
     this.logger.log(LogLevel.DEBUG, `ID: ${requestID}, Registering ${uri}`);
     const reg = this.regs.PutAndResolve(requestID);
-    await this.sender(msg);
+    try {
+      await this.sender(msg);
+    } catch (err) {
+      this.regs.Remove(requestID, err);
+      throw err;
+    }
     const registered = await reg;
     const regID = registered[2];
     const registration = new Registration(regID, uri, handler as any, async id => await this.unregister(id));
@@ -284,7 +297,12 @@ export class Callee extends MessageProcessor {
     ];
     const unreg = this.unregs.PutAndResolve(requestID);
     try {
-      await this.sender(msg);
+      try {
+        await this.sender(msg);
+      } catch (err) {
+        this.unregs.Remove(err);
+        throw err;
+      }
       await unreg;
       this.currentRegistrations.delete(reg.ID());
       reg.onUnregistered.resolve();
