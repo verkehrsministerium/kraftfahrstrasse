@@ -33,6 +33,7 @@ import { ConnectionStateMachine, EConnectionState, EMessageDirection } from './C
 import { IDGen, IMessageProcessorFactory } from './MessageProcessor';
 import { Publisher } from './Publisher';
 import { Subscriber } from './Subscriber';
+import { SerializationError } from '../transport/SerializationError';
 
 const createIdGens = () => {
   return {

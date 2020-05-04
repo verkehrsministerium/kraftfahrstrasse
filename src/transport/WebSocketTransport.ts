@@ -4,6 +4,7 @@ import { WampDict } from '../types/messages/MessageTypes';
 import { WampMessage } from '../types/Protocol';
 import { IsBinarySerializer, ISerializer } from '../types/Serializer';
 import { ETransportEventType, ITransport, TransportEvent } from '../types/Transport';
+import { SerializationError } from './SerializationError';
 
 export interface IWebSocketFactory {
   new(endpoint: string, protocol?: string | string[], transportOptions?: WampDict): WebSocket;
@@ -100,7 +101,12 @@ export abstract class WebSocketTransport implements ITransport {
 
   public Send(msg: WampMessage): Promise<void> {
     // console.log("===> SENDING MESSAGE:", msg);
-    const payload = this.serializer.Serialize(msg);
+    let payload;
+    try {
+      payload = this.serializer.Serialize(msg);
+    } catch (err) {
+      throw new SerializationError(err);
+    }
     return this.sendInternal(payload);
   }
 

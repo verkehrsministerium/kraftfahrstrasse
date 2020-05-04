@@ -160,7 +160,12 @@ export class Subscriber extends MessageProcessor {
       topic,
     ];
     const subscribedPromise = this.subs.PutAndResolve(requestID);
-    await this.sender(msg);
+    try {
+      await this.sender(msg);
+    } catch (err) {
+      this.subs.Remove(requestID, err);
+      throw err;
+    }
     return subscribedPromise.then(subscribed => {
       const subId = subscribed[2];
       this.logger.log(LogLevel.DEBUG, `ID: ${subId}, Subscribing ${topic}`);
@@ -231,6 +236,11 @@ export class Subscriber extends MessageProcessor {
     }, (err: any) => {
       sub.onUnsubscribed.reject(err);
     });
+    try {
     await this.sender(msg);
+    } catch (err) {
+      this.unsubs.Remove(requestID, err);
+      throw err;
+    }
   }
 }

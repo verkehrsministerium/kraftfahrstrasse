@@ -50,8 +50,14 @@ export class Caller extends MessageProcessor {
     const resultPromise = (async () => {
       const result = new Deferred<CallResult<RA, RK>>();
       this.pendingCalls.set(requestID, [result as Deferred<CallResult<any, any>>, proc]);
-      await this.sender(msg);
-      return result.promise;
+      try {
+        await this.sender(msg);
+      } catch (err) {
+        this.logger.log(LogLevel.WARNING, 'Call Failed ' + err);
+        this.pendingCalls.delete(requestID);
+        throw err;
+      }
+      return await result.promise;
     })();
     return [resultPromise, requestID];
   }

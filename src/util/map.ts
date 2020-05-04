@@ -13,6 +13,15 @@ export class PendingMap<TSucMsg extends WampMessage> {
     private emptyRequest?: (msg: TSucMsg) => [boolean, string],
   ) { }
 
+  public Remove(pendingId: WampID, err?: any): void {
+    const p = this.pendings.get(pendingId);
+    if (!p) {
+      return;
+    }
+    this.pendings.delete(pendingId);
+    p.reject(err);
+  }
+
   public Close(): void {
     this.closed = true;
     for (const pending of this.pendings) {
