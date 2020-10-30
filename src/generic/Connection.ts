@@ -33,7 +33,6 @@ import { ConnectionStateMachine, EConnectionState, EMessageDirection } from './C
 import { IDGen, IMessageProcessorFactory } from './MessageProcessor';
 import { Publisher } from './Publisher';
 import { Subscriber } from './Subscriber';
-import { SerializationError } from '../transport/SerializationError';
 
 const createIdGens = () => {
   return {
@@ -172,13 +171,14 @@ export class Connection implements IConnection {
         break;
       }
       case ETransportEventType.ERROR: {
-        if (this.state.getState() !== EConnectionState.ESTABLISHED && !!this.onOpen) {
-          this.onOpen.reject(event.error);
-          this.onOpen = null;
+        this.logger.log(LogLevel.DEBUG, `ConnError: ${event.error}`);
+        if (this.state.getState() !== EConnectionState.ESTABLISHED) {
+          this.handleOnOpen(new ConnectionOpenError(event.error));
         }
         break;
       }
       case ETransportEventType.CLOSE: {
+        this.logger.log(LogLevel.DEBUG, `ConnClose: ${event.wasClean} ${event.code} ${event.reason}`)
         this.transport = null;
         const state = this.state.getState();
         this.state = new ConnectionStateMachine();
@@ -186,20 +186,14 @@ export class Connection implements IConnection {
           this.subHandlers.forEach(h => h.Close());
           this.subHandlers = null;
         }
-        if (state !== EConnectionState.ESTABLISHED && !!this.onOpen) {
-          this.onOpen.reject(event.reason);
-          this.onOpen = null;
-        } else if (!!this.onClose) {
-          if (event.wasClean) {
-            this.onClose.resolve({
-              code: event.code,
-              reason: event.reason,
-              wasClean: event.wasClean,
-            });
-          } else {
-            this.onClose.reject(new ConnectionCloseError(event.reason, event.code));
-          }
-          this.onClose = null;
+        if (state !== EConnectionState.ESTABLISHED) {
+          this.handleOnOpen(new ConnectionOpenError(event.reason));
+        } else {
+          this.handleOnClose(event.wasClean ? {
+            code: event.code,
+            reason: event.reason,
+            wasClean: event.wasClean,
+          } : new ConnectionCloseError(event.reason, event.code));
         }
         break;
       }
@@ -290,8 +284,7 @@ export class Connection implements IConnection {
           LogLevel.DEBUG,
           `Opened Connection with ${this.connectionOptions.serializer.ProtocolID()} and ${this.transport.name}`,
         );
-        this.onOpen!.resolve(welcomeDetails);
-        this.onOpen = null;
+        this.handleOnOpen(welcomeDetails);
         break;
       }
       case EConnectionState.CLOSING: {
@@ -317,10 +310,7 @@ export class Connection implements IConnection {
           this.handleProtocolViolation('protocol violation during session establish');
         } else {
           this.transport.Close(3000, msg[2]);
-          if (!!this.onOpen) {
-            this.onOpen.reject(new ConnectionOpenError(msg[2], msg[1]));
-            this.onOpen = null;
-          }
+          this.handleOnOpen(new ConnectionOpenError(msg[2], msg[1]));
         }
         break;
       }
@@ -359,9 +349,30 @@ export class Connection implements IConnection {
     this.logger.log(LogLevel.ERROR, `Protocol violation: ${reason }`);
     this.transport.Send(abortMessage);
     this.transport.Close(3000, 'protcol_violation');
-    if (!!this.onOpen) {
-      this.onOpen.reject(new ConnectionOpenError('protcol violation'));
-      this.onOpen = null;
+    this.handleOnOpen(new ConnectionOpenError('protocol violation'));
+  }
+
+  private handleOnOpen(details: Error | WelcomeDetails): void {
+    if (!this.onOpen) {
+      return;
     }
+    if (details instanceof Error) {
+      this.onOpen.reject(details);
+    } else {
+      this.onOpen.resolve(details);
+    }
+    this.onOpen = null;
+  }
+
+  private handleOnClose(details: Error | ConnectionCloseInfo): void {
+    if (!this.onClose) {
+      return;
+    }
+    if (details instanceof Error) {
+      this.onClose.reject(details);
+    } else {
+      this.onClose.resolve(details);
+    }
+    this.onClose = null;
   }
 }
