@@ -186,9 +186,7 @@ export class Connection implements IConnection {
           this.subHandlers.forEach(h => h.Close());
           this.subHandlers = null;
         }
-        if (state !== EConnectionState.ESTABLISHED) {
-          this.handleOnOpen(new ConnectionOpenError(event.reason));
-        } else {
+        if (!this.handleOnOpen(new ConnectionOpenError(event.reason))) {
           this.handleOnClose(event.wasClean ? {
             code: event.code,
             reason: event.reason,
@@ -352,9 +350,9 @@ export class Connection implements IConnection {
     this.handleOnOpen(new ConnectionOpenError('protocol violation'));
   }
 
-  private handleOnOpen(details: Error | WelcomeDetails): void {
+  private handleOnOpen(details: Error | WelcomeDetails): boolean {
     if (!this.onOpen) {
-      return;
+      return false;
     }
     if (details instanceof Error) {
       this.onOpen.reject(details);
@@ -362,6 +360,7 @@ export class Connection implements IConnection {
       this.onOpen.resolve(details);
     }
     this.onOpen = null;
+    return true;
   }
 
   private handleOnClose(details: Error | ConnectionCloseInfo): void {
