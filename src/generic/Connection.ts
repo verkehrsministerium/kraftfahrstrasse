@@ -356,6 +356,8 @@ export class Connection implements IConnection {
     }
     if (details instanceof Error) {
       this.onOpen.reject(details);
+      // Reset the transport property, so we can run .open() again.
+      this.transport = null;
     } else {
       this.onOpen.resolve(details);
     }
