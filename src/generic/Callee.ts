@@ -300,7 +300,7 @@ export class Callee extends MessageProcessor {
       try {
         await this.sender(msg);
       } catch (err) {
-        this.unregs.Remove(err);
+        this.unregs.Remove(requestID, err);
         throw err;
       }
       await unreg;

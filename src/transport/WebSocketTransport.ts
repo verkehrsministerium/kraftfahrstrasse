@@ -53,7 +53,7 @@ export abstract class WebSocketTransport implements ITransport {
       } catch (err) {
         cb({
           type: ETransportEventType.ERROR,
-          error: err,
+          error: err as string,
         });
       }
     };
@@ -105,7 +105,7 @@ export abstract class WebSocketTransport implements ITransport {
     try {
       payload = this.serializer.Serialize(msg);
     } catch (err) {
-      throw new SerializationError(err);
+      throw new SerializationError(err as Error);
     }
     return this.sendInternal(payload);
   }
