@@ -47,7 +47,7 @@ import {
   Connection,
   JSONSerializer,
   NodeWebSocketTransport,
-} from 'kraftfahrstrasse';
+} from '@verkehrsministerium/kraftfahrstrasse';
 
 // Create a new connection object, using the parameters below.
 const connection = new Connection({
