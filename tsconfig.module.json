@@ -6,7 +6,8 @@
     "declaration": true,
     "declarationDir": "build/types",
     "sourceMap": true,
-    "inlineSourceMap": false
+    "inlineSourceMap": false,
+    "skipLibCheck": true,
   },
-  "include": [ "src" ]
+  "include": [ "src" ],
 }
